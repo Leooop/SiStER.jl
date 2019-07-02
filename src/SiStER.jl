@@ -10,7 +10,7 @@ module SiStER
 # standard :
 
 # third-party :
-
+using LazyJSON: PropertyDict
 #--------
 # FILES #
 #--------

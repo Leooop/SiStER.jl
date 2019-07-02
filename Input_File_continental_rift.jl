@@ -14,11 +14,11 @@ ysize=30e3
 # from GRID.x(1) to GRID.x(2), grid size is GRID.dx(1) etc...
 # same for y
 
-GRID = Dict(:x => [30e3,60e3],
+GRID = PropertyDict(Dict(:x => [30e3,60e3],
                 :dx => [2000,400,2000],
                 :y => [9e3,22e3],
                 :dy => [2000,400,2000]
-                )
+                ))
 
 
 
@@ -34,14 +34,14 @@ Nphase=3 # number of phases
 
 GEOM = []
 # phase 1
-push!(GEOM, Dict(:type => 1, :top => 0, :bot => 10e3))
+push!(GEOM, PropertyDict(Dict(:type => 1, :top => 0, :bot => 10e3)))
 # :type : 1 = layer (then specify top and bot) or 2 = circle # 1 = layer (then specify top and bot) or 2 = circle (then specify center and radius)
 
 # phase 2
-push!(GEOM, Dict(:type => 1, :top => 10e3, :bot => 30e3))
+push!(GEOM, PropertyDict(Dict(:type => 1, :top => 10e3, :bot => 30e3)))
 
 # phase 3
-push!(GEOM, Dict(:type => 2, :x0 => xsize/2, :y0 => 20e3, :rad => 1e3))
+push!(GEOM, PropertyDict(Dict(:type => 2, :x0 => xsize/2, :y0 => 20e3, :rad => 1e3)))
 
 
 # MATERIAL PROPERTIES #####################################################
@@ -52,7 +52,7 @@ push!(GEOM, Dict(:type => 2, :x0 => xsize/2, :y0 => 20e3, :rad => 1e3))
 
 MAT = []
 # phase 1
-push!(MAT, Dict(:phase => 1,
+push!(MAT, PropertyDict(Dict(:phase => 1,
                 # density parameters
                 :rho0 => 0.01,
                 :alpha => 0,
@@ -74,13 +74,13 @@ push!(MAT, Dict(:phase => 1,
                 :mumin => 0.3,
                 :Cmax => 40e6,
                 :Cmin => 0.01e6,
-                :ecrit => 0.1)
+                :ecrit => 0.1))
         )
 
 
 # phase 2
 
-push!(MAT, Dict(:phase => 2,
+push!(MAT, PropertyDict(Dict(:phase => 2,
                 # density parameters
                 :rho0 => 2700,
                 :alpha => 0,
@@ -102,12 +102,12 @@ push!(MAT, Dict(:phase => 2,
                 :mumin => 0.3,
                 :Cmax => 40e6,
                 :Cmin => 0.01e6,
-                :ecrit => 0.1)
+                :ecrit => 0.1))
         )
 
 
 # phase 3
-push!(MAT, Dict(:phase => 3,
+push!(MAT, PropertyDict(Dict(:phase => 3,
                 # density parameters
                 :rho0 => 2700,
                 :alpha => 0,
@@ -129,7 +129,7 @@ push!(MAT, Dict(:phase => 3,
                 :mumin => 0.3,
                 :Cmax => 0.01e6,
                 :Cmin => 0.01e6,
-                :ecrit => 0.1)
+                :ecrit => 0.1))
         )
 
 
@@ -210,3 +210,7 @@ BCtherm[:top]=[1 0]
 BCtherm[:bot]=[1 1000]
 BCtherm[:left]=[2 0]
 BCtherm[:right]=[2 0]
+
+PARAMS = PropertyDict(PARAMS)
+BC = PropertyDict(BC)
+BCtherm = PropertyDict(BCtherm)
