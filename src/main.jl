@@ -1,4 +1,4 @@
-# SiStER_MAIN.m
+# main function
 #
 # Simple Stokes solver with Exotic Rheologies
 #
