@@ -17,7 +17,7 @@ ysize=30e3
 GRID = PropertyDict(Dict(:x => [30e3,60e3],
                 :dx => [2000,400,2000],
                 :y => [9e3,22e3],
-                :dy => [2000,400,2000]
+                :dy => [1000,500,2000]
                 ))
 
 
@@ -29,8 +29,8 @@ Mquad=8 # number of markers in the smallest quadrant
 Mquad_crit=4 # minimum number of markers allowed in smallest quadrant (for reseeding)
 
 # GEOMETRY ################################################################
-
-Nphase=3 # number of phases
+PARAMS = Dict()
+PARAMS[:Nphase]=3 # number of phases
 
 GEOM = []
 # phase 1
@@ -134,7 +134,6 @@ push!(MAT, PropertyDict(Dict(:phase => 3,
 
 
 # ADDITIONAL PARAMETERS ###################################################
-PARAMS = Dict()
 PARAMS[:YNElast]=1 # elasticity on (1) or off (0)
 PARAMS[:YNPlas]=1 # plasticity on (1) or off (0)
 PARAMS[:tau_heal]=1e12 # healing time for plasticity (s)
