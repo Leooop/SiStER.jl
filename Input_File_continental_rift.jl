@@ -8,16 +8,16 @@ dt_out=10 # output files every "dt_out" iterations
 
 
 # DOMAIN SIZE AND GRIDDING ################################################
-xsize=90e3
-ysize=30e3
+xsize=10
+ysize=10
 # gridding- from 0 to GRID.x(1), grid size is GRID.dx(1)
 # from GRID.x(1) to GRID.x(2), grid size is GRID.dx(1) etc...
 # same for y
 
-GRID = PropertyDict(Dict(:x => [30e3,60e3],
-                :dx => [2000,400,2000],
-                :y => [9e3,22e3],
-                :dy => [1000,500,2000]
+GRID = PropertyDict(Dict(:x => [4,6],
+                :dx => [0.5,1,0.5],
+                :y => [4,6],
+                :dy => [0.5,1,0.5]
                 ))
 
 

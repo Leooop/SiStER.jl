@@ -8,6 +8,7 @@ module SiStER
 # PACKAGES USED #
 #----------------
 # standard :
+using Random
 
 # third-party :
 using LazyJSON: PropertyDict
