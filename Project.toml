@@ -1,3 +1,4 @@
 [deps]
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 LazyJSON = "fc18253b-5e1b-504c-a4a2-9ece4944c004"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

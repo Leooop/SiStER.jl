@@ -6,10 +6,10 @@
 X,Y,x,y,xc,yc,dx,dy,Nx,Ny = initialize_grid(xsize,ysize,GRID)
 
 # initialize marker arrays and positions
-xm, ym = initialize_marker_positions(xsize,ysize,dx,dy,Mquad);
+xm, ym = initialize_marker_positions(xsize,ysize,dx,dy,Mquad)
 
 # locate markers with respect to grid
-[qd,icn,jcn] = SiStER_locate_markers_in_grid(xm,ym,x,y,dx,dy);
+qd,icn,jcn = locate_markers_in_grid(xm,ym,x,y,dx,dy)
 
 # assign marker phases
 [im] = SiStER_initialize_marker_phases(Nphase,GEOM,xm,ym);

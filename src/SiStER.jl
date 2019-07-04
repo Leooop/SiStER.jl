@@ -12,6 +12,7 @@ using Random
 
 # third-party :
 using LazyJSON: PropertyDict
+using Interpolations
 #--------
 # FILES #
 #--------
