@@ -43,7 +43,7 @@ function locate_markers_in_grid(xm::Vector{Float64},ym::Vector{Float64},x::Vecto
     icn[icn.>length(dy)] .= length(dy)
 
     disx = abs.((xm.-x[jcn])./dx[jcn])
-    disy = abs.((ym.-y[icn])./dy[icn]);
+    disy = abs.((ym.-y[icn])./dy[icn])
 
 
     xRIGHT = disx .> 0.5
@@ -59,6 +59,6 @@ function locate_markers_in_grid(xm::Vector{Float64},ym::Vector{Float64},x::Vecto
 end
 
 # Visualization :
-scatter(X,Y)
-inds = (icn .>= 5) .& (jcn .>= 2) .& (qd .== 4)
-scatter!(xm[inds],ym[inds],ms = 0.5)
+# scatter(X,Y)
+# inds = (icn .>= 0) .& (jcn .>= 0) .& (qd .== 1)
+# scatter!(xm[inds],ym[inds],ms = 0.5)
