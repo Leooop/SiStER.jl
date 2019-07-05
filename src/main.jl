@@ -24,13 +24,13 @@ function main(InpFil::String)
 
     for t=1:Nt # time loop
 
-        println('STARTING ITERATION: ', string(t) ' out of ' string(Nt))
+        println("STARTING ITERATION: ", string(t), " out of ", string(Nt))
 
         # update time
-        time_sim += dt_m;
+        time_sim += dt_m
 
         # Here we prepare nodal arrays to feed the Stokes solver
-        SiStER_material_props_on_nodes
+        include("material_props_on_nodes.jl")
 
         ### SOLVE STOKES WITH NON-LINEAR RHEOLOGY HERE
         SiStER_flow_solve

@@ -14,11 +14,11 @@ ysize=30e3
 # from GRID.x(1) to GRID.x(2), grid size is GRID.dx(1) etc...
 # same for y
 
-GRID = Dict(:x => [30e3,60e3],
+GRID = PropertyDict(Dict(:x => [30e3,60e3],
                 :dx => [2000,400,2000],
                 :y => [9e3,22e3],
                 :dy => [2000,400,2000]
-                )
+                ))
 
 
 

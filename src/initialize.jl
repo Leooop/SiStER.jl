@@ -28,7 +28,7 @@ idm=collect(1:length(xm))
 
 # initialize temperature structure on nodes
 T = PARAMS.a0 .+ PARAMS.a1.*Y .+ PARAMS.a2.*Y.^2 .+ PARAMS.a3.*Y.^3
-T = T .+ PARAMS.amp.*sin(2 .*pi.*X./PARAMS.lam)
+T = T .+ PARAMS.amp.*sin.(2 .*pi.*X./PARAMS.lam)
 if PARAMS.ynTreset==1 # reset T=T0 in top layer
     T[T.<PARAMS.T0].=PARAMS.T0
 end
