@@ -17,7 +17,7 @@ function main(InpFil::String)
     include(InpFil)
 
     # construct grid and initialize marker / node arrays
-    SiStER_Initialize
+    include("initialize.jl")
 
     # BEGIN TIME LOOP #########################################################
     time_sim = 0

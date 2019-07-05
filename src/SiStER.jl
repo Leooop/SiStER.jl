@@ -8,11 +8,15 @@ module SiStER
 # PACKAGES USED #
 #----------------
 # standard :
-using Random
+using
+    Random: randperm,
+    Statistics: mean
 
 # third-party :
-using LazyJSON: PropertyDict
-using Interpolations
+using
+    LazyJSON: PropertyDict,
+    Interpolations
+
 #--------
 # FILES #
 #--------

@@ -8,17 +8,18 @@ dt_out=10 # output files every "dt_out" iterations
 
 
 # DOMAIN SIZE AND GRIDDING ################################################
-xsize=90e3
-ysize=30e3
+xsize=10
+ysize=10
 # gridding- from 0 to GRID.x(1), grid size is GRID.dx(1)
 # from GRID.x(1) to GRID.x(2), grid size is GRID.dx(1) etc...
 # same for y
 
-GRID = Dict(:x => [30e3,60e3],
-                :dx => [2000,400,2000],
-                :y => [9e3,22e3],
-                :dy => [2000,400,2000]
-                )
+GRID = PropertyDict(Dict(:x => [4,6],
+                :dx => [0.5,1,0.5],
+                :y => [4,6],
+                :dy => [0.5,1,0.5]
+                ))
+
 
 
 
@@ -33,14 +34,14 @@ PARAMS[:Nphase]=3 # number of phases
 
 GEOM = []
 # phase 1
-push!(GEOM, PropertyDict(Dict(:type => 1, :top => 0, :bot => 10e3)))
+push!(GEOM, PropertyDict(Dict(:type => 1, :top => 0, :bot => 2)))
 # :type : 1 = layer (then specify top and bot) or 2 = circle # 1 = layer (then specify top and bot) or 2 = circle (then specify center and radius)
 
 # phase 2
-push!(GEOM, PropertyDict(Dict(:type => 1, :top => 10e3, :bot => 30e3)))
+push!(GEOM, PropertyDict(Dict(:type => 1, :top => 2, :bot => 10)))
 
 # phase 3
-push!(GEOM, PropertyDict(Dict(:type => 2, :x0 => xsize/2, :y0 => 20e3, :rad => 1e3)))
+push!(GEOM, PropertyDict(Dict(:type => 2, :x0 => xsize/2, :y0 => ysize/2, :rad => 1.5)))
 
 
 # MATERIAL PROPERTIES #####################################################
