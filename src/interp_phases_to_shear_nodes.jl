@@ -2,7 +2,7 @@
 # B.Z. Klein, July 2017, an interp function specific to phase (to shear nodes), to enable
 # exact mixing of several phases
 
-function interp_phases_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,phases,PARAMS.Nphase)
+function interp_phases_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,phases,PARAMS)
 
     Nx=length(x)
     Ny=length(y)
@@ -114,7 +114,7 @@ function interp_phases_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,phases,PARAMS.Nphas
         w3_term = copy(w1_term)
         w4_term = copy(w1_term)
 
-        phaseMask = phases == n
+        phaseMask = (phases .== n)
 
         ICNp, JCNp, wm1p = ICN[cell1 .& phaseMask], JCN[cell1 .& phaseMask], wm1[phaseMask[cell1]]
         for i in eachindex(ICNp)
@@ -133,12 +133,11 @@ function interp_phases_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,phases,PARAMS.Nphas
             w4_term[ICNp[i],JCNp[i]] += wm4p[i]
         end
 
+        phasesS[:,:,n] = ((wc1.*w1_term)./w1 +
+                        (wc2.*w2_term)./w2 +
+                        (wc3.*w3_term)./w3 +
+                        (wc4.*w4_term)./w4 )./ (wc1+wc2+wc4+wc4)
 
-        # phasesS[:,:,n] = (wc1*accumarray([ICN(cell1 & phaseMask)', JCN(cell1 & phaseMask)'], wm1(phaseMask(cell1)), [Ny, Nx])./w1 +
-        #     wc2*accumarray([ICN(cell2 & phaseMask)', JCN(cell2 & phaseMask)'], wm2(phaseMask(cell2)), [Ny, Nx])./w2 +
-        #     wc3*accumarray([ICN(cell3 & phaseMask)', JCN(cell3 & phaseMask)'], wm3(phaseMask(cell3)), [Ny, Nx])./w3 +
-        #     wc4*accumarray([ICN(cell4 & phaseMask)', JCN(cell4 & phaseMask)'], wm4(phaseMask(cell4)), [Ny, Nx])./w4)./
-        #     (wc1+wc2+wc4+wc4);
     end
 
 
@@ -147,234 +146,327 @@ function interp_phases_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,phases,PARAMS.Nphas
 
     ### top edge
 
-    topEdge = jcn>1 & jcn<Nx & icn==1;
-    shifted = jcn<Nx-1 & icn==1;
+    topEdge = (jcn.>1) .& (jcn.<Nx) .& (icn.==1)
+    shifted = (jcn.<Nx-1) .& (icn.==1)
 
     # cell 1
 
-    cell1 = shifted & quad==2;
+    cell1 = shifted .& (quad.==2)
 
-    ddx = dx(JCN(cell1)-1);
-    ddy = dy(1);
-    dxm = xm(cell1) - x(JCN(cell1));
-    dym = ym(cell1) - y(ICN(cell1));
-    wm1 = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)./(ddx.*ddy);
-    w1 = accumarray([ICN(cell1)', JCN(cell1)'], wm1, [1, Nx]);
-
+    ddx = dx[JCN[cell1].-1]    # ???????
+    ddy = dy[1]
+    dxm = xm[cell1] .- x[JCN[cell1]]  # ????????
+    dym = ym[cell1] .- y[ICN[cell1]]
+    wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
+    #w1 = accumarray([ICN(cell1)', JCN(cell1)'], wm1, [1, Nx]);
+    w1 = zeros(Float64, (1,Nx))
+    ICNp, JCNp = ICN[cell1], JCN[cell1]
+    for i in eachindex(ICNp)
+        w1[ICNp[i],JCNp[i]] += wm1[i]
+    end
     # cell 2
 
-    cell2 = topEdge & quad==1;
+    cell2 = topEdge .& (quad.==1)
 
-    ddx = dx(JCN(cell2));
-    ddy = dy(1);
-    dxm = xm(cell2) - x(JCN(cell2));
-    dym = ym(cell2) - y(ICN(cell2));
-    wm2 = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)./(ddx.*ddy);
-    w2  = accumarray([ICN(cell2)', JCN(cell2)'], wm2, [1, Nx]);
+    ddx = dx[JCN[cell2]]
+    ddy = dy[1]
+    dxm = xm[cell2] .- x[JCN[cell2]]
+    dym = ym[cell2] .- y[ICN[cell2]]
+    wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
+    #w2  = accumarray([ICN(cell2)', JCN(cell2)'], wm2, [1, Nx]);
+    w2 = zeros(Float64, (1,Nx))
+    ICNp, JCNp = ICN[cell2], JCN[cell2]
+    for i in eachindex(ICNp)
+        w2[ICNp[i],JCNp[i]] += wm2[i]
+    end
 
     #loop over material properties to interpolate
 
     for n = 1:PARAMS.Nphase
 
-        phaseMask = phases == n;
+        w1_term = zeros(Float64, (1,Nx))
+        w2_term = copy(w1_term)
 
-        temp = (wc1*accumarray([ICN(cell1 & phaseMask)', JCN(cell1 & phaseMask)'], wm1(phaseMask(cell1)), [1, Nx])./w1 + ...
-            wc2*accumarray([ICN(cell2 & phaseMask)', JCN(cell2 & phaseMask)'], wm2(phaseMask(cell2)), [1, Nx])./w2)/...
-            (wc1+wc2);
-        phasesS(1,:,n) = temp;
+        phaseMask = (phases .== n)
+
+        ICNp, JCNp, wm1p = ICN[cell1 .& phaseMask], JCN[cell1 .& phaseMask], wm1[phaseMask[cell1]]
+        for i in eachindex(ICNp)
+            w1_term[ICNp[i],JCNp[i]] += wm1p[i]
+        end
+        ICNp, JCNp, wm2p = ICN[cell2 .& phaseMask], JCN[cell2 .& phaseMask], wm2[phaseMask[cell2]]
+        for i in eachindex(ICNp)
+            w2_term[ICNp[i],JCNp[i]] += wm2p[i]
+        end
+
+        phasesS[1,:,n] = ((wc1.*w1_term)./w1 +
+                        (wc2.*w2_term)./w2) ./ (wc1+wc2)
+
     end
-
-    clear w1 w2
 
     ### bottom edge
 
-    bottomEdge = jcn>1 & jcn<Nx & icn==Ny-1;
-    shifted =    jcn<Nx-1       & icn==Ny-1;
+    bottomEdge = (jcn.>1) .& (jcn.<Nx) .& (icn.==(Ny-1))
+    shifted = (jcn.<(Nx-1)) .& (icn.==(Ny-1))
 
     # cell 1
 
-    cell1 = shifted & quad==3;
+    cell1 = shifted .& (quad.==3)
 
-    ddx = dx(JCN(cell1)-1);
-    ddy = dy(Ny-1);
-    dxm = xm(cell1) - x(JCN(cell1));
-    dym = ym(cell1) - y(end-1);
-    wm1 = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)./(ddx.*ddy);
-    w1 = accumarray([ones(sum(cell1),1), JCN(cell1)'], wm1, [1, Nx]);
+    ddx = dx[JCN[cell1].-1]
+    ddy = dy[Ny-1]
+    dxm = xm[cell1] .- x[JCN[cell1]]
+    dym = ym[cell1] .- y[end-1]
+    wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
+    #w1 = accumarray([ones(sum(cell1),1), JCN(cell1)'], wm1, [1, Nx]);
+    w1 = zeros(Float64, (1,Nx))
+    ICNp, JCNp = ones(Int,sum(cell1)), JCN[cell1]
+    for i in eachindex(ICNp)
+        w1[ICNp[i],JCNp[i]] += wm1[i]
+    end
 
     # cell 2
 
-    cell2 = bottomEdge & quad==4;
+    cell2 = bottomEdge .& (quad.==4)
 
-    ddx = dx(JCN(cell2));
-    ddy = dy(Ny-1);
-    dxm = xm(cell2) - x(JCN(cell2));
-    dym = ym(cell2) - y(end-1);
-    wm2 = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)./(ddx.*ddy);
-    w2  = accumarray([ones(sum(cell2),1), JCN(cell2)'], wm2, [1, Nx]);
-
+    ddx = dx[JCN[cell2]]
+    ddy = dy[Ny-1]
+    dxm = xm[cell2] .- x[JCN[cell2]]
+    dym = ym[cell2] .- y[end-1]
+    wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
+    #w2  = accumarray([ones(sum(cell2),1), JCN(cell2)'], wm2, [1, Nx]);
+    w2 = zeros(Float64, (1,Nx))
+    ICNp, JCNp = ones(Int,sum(cell2)), JCN[cell2]
+    for i in eachindex(ICNp)
+        w2[ICNp[i],JCNp[i]] += wm2[i]
+    end
     #loop over material properties to interpolate
 
     for n = 1:PARAMS.Nphase
 
-        phaseMask = phases == n;
+        w1_term = zeros(Float64, (1,Nx))
+        w2_term = copy(w1_term)
 
-        temp = (wc1*accumarray([ones(sum(cell1 & phaseMask),1), JCN(cell1 & phaseMask)'], wm1(phaseMask(cell1)), [1, Nx])./w1 + ...
-            wc2*accumarray([ones(sum(cell2 & phaseMask),1), JCN(cell2 & phaseMask)'], wm2(phaseMask(cell2)), [1, Nx])./w2)/...
-            (wc1+wc2);
-        phasesS(Ny,:,n) = temp;
+        phaseMask = (phases .== n)
+
+        ICNp, JCNp, wm1p = ones(Int,sum(cell1 .& phaseMask)), JCN[cell1 .& phaseMask], wm1[phaseMask[cell1]]
+        for i in eachindex(ICNp)
+            w1_term[ICNp[i],JCNp[i]] += wm1p[i]
+        end
+        ICNp, JCNp, wm2p = ones(Int,sum(cell2 .& phaseMask)), JCN[cell2 .& phaseMask], wm2[phaseMask[cell2]]
+        for i in eachindex(ICNp)
+            w2_term[ICNp[i],JCNp[i]] += wm2p[i]
+        end
+
+        phasesS[Ny,:,n] = ((wc1.*w1_term)./w1 +
+                        (wc2.*w2_term)./w2) ./ (wc1+wc2)
+
+        # temp = (wc1*accumarray([ones(sum(cell1 & phaseMask),1), JCN(cell1 & phaseMask)'], wm1(phaseMask(cell1)), [1, Nx])./w1 + ...
+        #     wc2*accumarray([ones(sum(cell2 & phaseMask),1), JCN(cell2 & phaseMask)'], wm2(phaseMask(cell2)), [1, Nx])./w2)/...
+        #     (wc1+wc2);
+        # phasesS(Ny,:,n) = temp;
     end
 
     ### left edge
 
-    leftEdge = jcn==1 & icn>1 & icn<Ny;
-    shifted  = jcn==1 & icn<Ny-1;
+    leftEdge = (jcn.==1) .& (icn.>1) .& (icn.<Ny)
+    shifted  = (jcn.==1) .& (icn.<Ny-1)
 
     # cell 1
 
-    cell1 = shifted & quad==4;
+    cell1 = shifted .& (quad.==4)
 
-    ddx = dx(1);
-    ddy = dy(ICN(cell1)-1);
-    dxm = xm(cell1) - x(1);
-    dym = ym(cell1) - y(ICN(cell1));
-    wm1 = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)./(ddx.*ddy);
-    w1 = accumarray([ICN(cell1)', ones(sum(cell1),1)], wm1, [Ny, 1]);
+    ddx = dx[1]
+    ddy = dy[ICN[cell1].-1]
+    dxm = xm[cell1] .- x[1]
+    dym = ym[cell1] .- y[ICN[cell1]]
+    wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
+    #w1 = accumarray([ICN(cell1)', ones(sum(cell1),1)], wm1, [Ny, 1]);
+    w1 = zeros(Float64, (Ny,1))
+    ICNp, JCNp = ICN[cell1], ones(Int,sum(cell1))
+    for i in eachindex(ICNp)
+        w1[ICNp[i],JCNp[i]] += wm1[i]
+    end
+
 
     # cell 2
 
-    cell2 = leftEdge & quad==1;
+    cell2 = leftEdge .& (quad.==1)
 
-    ddx = dx(1);
-    ddy = dy(ICN(cell2));
-    dxm = xm(cell2) - x(1);
-    dym = ym(cell2) - y(ICN(cell2));
-    wm2 = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)./(ddx.*ddy);
-    w2 = accumarray([ICN(cell2)', ones(sum(cell2),1)], wm2, [Ny, 1]);
+    ddx = dx[1]
+    ddy = dy[ICN[cell2]]
+    dxm = xm[cell2] .- x[1]
+    dym = ym[cell2] .- y[ICN[cell2]]
+    wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
+    #w2 = accumarray([ICN(cell2)', ones(sum(cell2),1)], wm2, [Ny, 1]);
+    w2 = zeros(Float64, (Ny,1))
+    ICNp, JCNp = ICN[cell2], ones(Int,sum(cell2))
+    for i in eachindex(ICNp)
+        w2[ICNp[i],JCNp[i]] += wm2[i]
+    end
 
     #loop over material properties to interpolate
 
     for n = 1:PARAMS.Nphase
 
-        phaseMask = phases == n;
+        w1_term = zeros(Float64, (Ny,1))
+        w2_term = copy(w1_term)
 
-        temp = (wc1*accumarray([ICN(cell1 & phaseMask)', ones(sum(cell1 & phaseMask),1)], wm1(phaseMask(cell1)), [Ny, 1])./w1 + ...
-            wc2*accumarray([ICN(cell2 & phaseMask)', ones(sum(cell2 & phaseMask),1)], wm2(phaseMask(cell2)), [Ny, 1])./w2)/...
-            (wc1+wc2);
-        phasesS(:, 1, n) = temp;
+        phaseMask = (phases .== n)
+
+        ICNp, JCNp, wm1p = ICN[cell1 .& phaseMask], ones(Int,sum(cell1 .& phaseMask)), wm1[phaseMask[cell1]]
+        for i in eachindex(ICNp)
+            w1_term[ICNp[i],JCNp[i]] += wm1p[i]
+        end
+        ICNp, JCNp, wm2p = ICN[cell2 .& phaseMask], ones(Int,sum(cell2 .& phaseMask)), wm2[phaseMask[cell2]]
+        for i in eachindex(ICNp)
+            w2_term[ICNp[i],JCNp[i]] += wm2p[i]
+        end
+
+        phasesS[:,1,n] = ((wc1.*w1_term)./w1 +
+                        (wc2.*w2_term)./w2) ./ (wc1+wc2)
+
+        # temp = (wc1*accumarray([ICN(cell1 & phaseMask)', ones(sum(cell1 & phaseMask),1)], wm1(phaseMask(cell1)), [Ny, 1])./w1 + ...
+        #     wc2*accumarray([ICN(cell2 & phaseMask)', ones(sum(cell2 & phaseMask),1)], wm2(phaseMask(cell2)), [Ny, 1])./w2)/...
+        #     (wc1+wc2);
+        # phasesS(:, 1, n) = temp;
     end
 
     ### right edge
 
-    rightEdge = jcn==Nx-1 & icn>1 & icn<Ny;
-    shifted =   jcn==Nx-1 & icn<Ny-1;
+    rightEdge = (jcn.==Nx-1) .& (icn.>1) .& (icn.<Ny)
+    shifted =   (jcn.==(Nx-1)) .& (icn.<(Ny-1))
 
     # cell 1
 
-    cell1 = shifted & quad==3;
+    cell1 = shifted .& (quad.==3)
 
-    ddx = dx(Nx-1);
-    ddy = dy(ICN(cell1)-1);
-    dxm = xm(cell1) - x(Nx-1);
-    dym = ym(cell1) - y(ICN(cell1));
-    wm1 = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)./(ddx.*ddy);
-    w1 = accumarray([ICN(cell1)', ones(sum(cell1),1)], wm1, [Ny, 1]);
+    ddx = dx[Nx-1]
+    ddy = dy[ICN[cell1].-1]
+    dxm = xm[cell1] .- x[Nx-1]
+    dym = ym[cell1] .- y[ICN[cell1]]
+    wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
+    #w1 = accumarray([ICN(cell1)', ones(sum(cell1),1)], wm1, [Ny, 1]);
+    w1 = zeros(Float64, (Ny,1))
+    ICNp, JCNp = ICN[cell1], ones(Int,sum(cell1))
+    for i in eachindex(ICNp)
+        w1[ICNp[i],JCNp[i]] += wm1[i]
+    end
 
     # cell 2
 
-    cell2 = rightEdge & quad==2;
+    cell2 = rightEdge .& (quad.==2)
 
-    ddx = dx(Nx-1);
-    ddy = dy(ICN(cell2));
-    dxm = xm(cell2) - x(Nx-1);
-    dym = ym(cell2) - y(ICN(cell2));
-    wm2 = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)./(ddx.*ddy);
-    w2 = accumarray([ICN(cell2)', ones(sum(cell2),1)], wm2, [Ny, 1]);
+    ddx = dx[Nx-1]
+    ddy = dy[ICN[cell2]]
+    dxm = xm[cell2] .- x[Nx-1]
+    dym = ym[cell2] .- y[ICN[cell2]]
+    wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
+    #w2 = accumarray([ICN(cell2)', ones(sum(cell2),1)], wm2, [Ny, 1]);
+    w2 = zeros(Float64, (Ny,1))
+    ICNp, JCNp = ICN[cell2], ones(Int,sum(cell2))
+    for i in eachindex(ICNp)
+        w2[ICNp[i],JCNp[i]] += wm2[i]
+    end
 
     #loop over material properties to interpolate
 
     for n = 1:PARAMS.Nphase
 
-        phaseMask = phases == n;
+        w1_term = zeros(Float64, (Ny,1))
+        w2_term = copy(w1_term)
 
-        temp = (wc1*accumarray([ICN(cell1 & phaseMask)', ones(sum(cell1 & phaseMask),1)], wm1(phaseMask(cell1)), [Ny, 1])./w1 + ...
-            wc2*accumarray([ICN(cell2 & phaseMask)', ones(sum(cell2 & phaseMask),1)], wm2(phaseMask(cell2)), [Ny, 1])./w2)/...
-            (wc1+wc2);
-        phasesS(:,Nx, n) = temp;
+        phaseMask = (phases .== n)
+
+        ICNp, JCNp, wm1p = ICN[cell1 .& phaseMask], ones(Int,sum(cell1 .& phaseMask)), wm1[phaseMask[cell1]]
+        for i in eachindex(ICNp)
+            w1_term[ICNp[i],JCNp[i]] += wm1p[i]
+        end
+        ICNp, JCNp, wm2p = ICN[cell2 .& phaseMask], ones(Int,sum(cell2 .& phaseMask)), wm2[phaseMask[cell2]]
+        for i in eachindex(ICNp)
+            w2_term[ICNp[i],JCNp[i]] += wm2p[i]
+        end
+
+        phasesS[:,Nx,n] = ((wc1.*w1_term)./w1 +
+                        (wc2.*w2_term)./w2) ./ (wc1+wc2)
+
+        # temp = (wc1*accumarray([ICN(cell1 & phaseMask)', ones(sum(cell1 & phaseMask),1)], wm1(phaseMask(cell1)), [Ny, 1])./w1 + ...
+        #     wc2*accumarray([ICN(cell2 & phaseMask)', ones(sum(cell2 & phaseMask),1)], wm2(phaseMask(cell2)), [Ny, 1])./w2)/...
+        #     (wc1+wc2);
+        # phasesS(:,Nx, n) = temp;
     end
 
     ## CORNERS
 
     # upper left
 
-    upperLeft = jcn==1 & icn==1 & quad==1;
+    upperLeft = (jcn.==1) .& (icn.==1) .& (quad.==1)
 
-    ddx = dx(1);
-    ddy = dy(1);
-    dxm = xm(upperLeft) - x(1);
-    dym = ym(upperLeft) - y(1);
-    wm  = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)/(ddx*ddy);
-    wco = sum(wm);
+    ddx = dx[1]
+    ddy = dy[1]
+    dxm = xm[upperLeft] .- x[1]
+    dym = ym[upperLeft] .- y[1]
+    wm  = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx*ddy)
+    wco = sum(wm)
 
     for n = 1:PARAMS.Nphase
 
-        phaseMask = phases == n;
+        phaseMask = (phases .== n)
 
-        phasesS(1,1,n) = sum(wm(phaseMask(upperLeft)))./wco;
+        phasesS[1,1,n] = sum(wm[phaseMask[upperLeft]])./wco
     end
 
     # upper right
 
-    upperRight = icn==1 & jcn==Nx-1 & quad==2;
+    upperRight = (icn.==1) .& (jcn.==(Nx-1)) .& (quad.==2)
 
-    ddx = dx(Nx-1);
-    ddy = dy(1);
-    dxm = xm(upperRight) - x(Nx-1);
-    dym = ym(upperRight) - y(1);
-    wm  = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)/(ddx*ddy);
-    wco = sum(wm);
+    ddx = dx[Nx-1]
+    ddy = dy[1]
+    dxm = xm[upperRight] .- x[Nx-1]
+    dym = ym[upperRight] .- y[1]
+    wm  = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx*ddy)
+    wco = sum(wm)
 
     for n = 1:PARAMS.Nphase
 
-        phaseMask = phases == n;
+        phaseMask = (phases .== n)
 
-        phasesS(1,Nx,n) = sum(wm(phaseMask(upperRight)))./wco;
+        phasesS[1,Nx,n] = sum(wm[phaseMask[upperRight]])./wco
     end
 
     # lower Right
 
-    lowerRight = icn==Ny-1 & jcn==Nx-1 & quad==3;
+    lowerRight = (icn.==Ny-1) .& (jcn.==(Nx-1)) .& (quad.==3)
 
-    ddx = dx(Nx-1);
-    ddy = dy(Ny-1);
-    dxm = xm(lowerRight) - x(Nx-1);
-    dym = ym(lowerRight) - y(Ny-1);
-    wm  = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)/(ddx*ddy);
-    wco = sum(wm);
+    ddx = dx[Nx-1]
+    ddy = dy[Ny-1]
+    dxm = xm[lowerRight] .- x[Nx-1]
+    dym = ym[lowerRight] .- y[Ny-1]
+    wm  = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx*ddy)
+    wco = sum(wm)
 
     for n = 1:PARAMS.Nphase
 
-        phaseMask = phases == n;
+        phaseMask = (phases .== n)
 
-        phasesS(Ny,Nx,n) = sum(wm(phaseMask(lowerRight)))./wco;
+        phasesS[Ny,Nx,n] = sum(wm[phaseMask[lowerRight]])./wco
     end
 
     # lower left
 
-    lowerLeft = icn==Ny-1 & jcn==1 & quad==4;
+    lowerLeft = (icn.==(Ny-1)) .& (jcn.==1) .& (quad.==4)
 
-    ddx = dx(1);
-    ddy = dy(Ny-1);
-    dxm = xm(lowerLeft) - x(1);
-    dym = ym(lowerLeft) - y(Ny-1);
-    wm  = 1 - (dxm.*dym + (ddx-dxm).*dym + (ddy-dym).*dxm)/(ddx*ddy);
-    wco = sum(wm);
+    ddx = dx[1]
+    ddy = dy[Ny-1]
+    dxm = xm[lowerLeft] .- x[1]
+    dym = ym[lowerLeft] .- y[Ny-1]
+    wm  = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx*ddy)
+    wco = sum(wm)
 
     for n = 1:PARAMS.Nphase
 
-        phaseMask = phases == n;
+        phaseMask = (phases .== n)
 
-        phasesS(Ny,1,n) = sum(wm(phaseMask(lowerLeft)))./wco;
+        phasesS[Ny,1,n] = sum(wm[phaseMask[lowerLeft]])./wco
     end
 
     return phasesS

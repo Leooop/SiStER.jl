@@ -6,7 +6,7 @@
 
 # PHASE PROPORTIONS AT NORMAL AND SHEAR NODES. G.Ito 8/16
 phase_n = interp_phases_to_normal_nodes(xm,ym,icn,jcn,x,y,phm,PARAMS)
-phase_s = SiStER_interp_phases_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,phm,PARAMS)
+phase_s = interp_phases_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,phm,PARAMS)
 # phase_n and _s is a Ny*Nx*Nphase array containing the proportion
 # of each phase at each node - this gets used in get_ductile_rheology
 # functions
