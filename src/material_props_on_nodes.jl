@@ -22,9 +22,9 @@ phase_s = interp_phases_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,phm,PARAMS)
 # phase_s=round(phase_s*1e10)/1e10; #prevents a case in which phase_n>NPhase
 
 # GET MARKER DENSITIES
-[rhom]=SiStER_get_density(im,Tm,MAT);
+rhom = get_density(phm,Tm,MAT)
 # pass density to nodes
-[n2interp] = SiStER_interp_markers_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,rhom);
+n2interp = interp_markers_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,rhom)
 rho  = n2interp(1).data;
 
 # GET MARKER ELASTIC PROPERTIES  G.Ito 8/16

@@ -19,6 +19,6 @@ using Interpolations
 # FILES #
 #--------
 
-include("functions_load.jl")
+include("src/functions_load.jl")
 include("main.jl")
 end # module
