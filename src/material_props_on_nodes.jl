@@ -25,16 +25,21 @@ phase_s = interp_phases_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,phm,PARAMS)
 rhom = get_density(phm,Tm,MAT)
 # pass density to nodes
 n2interp = interp_markers_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,rhom)
-rho  = n2interp(1).data;
+rho  = n2interp[1].data
 
 # GET MARKER ELASTIC PROPERTIES  G.Ito 8/16
-[Gm]=SiStER_get_elastic_moduli(im,MAT);
+Gm=get_elastic_moduli(phm,MAT)
 # pass shear modulus to nodes
-[n2interp] = SiStER_interp_markers_to_normal_nodes(xm,ym,icn,jcn,x,y,1./Gm);
-Gn=1./(n2interp(1).data);
-[n2interp] = SiStER_interp_markers_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,1./Gm);
-Gs = 1./(n2interp(1).data);
+n2interp = interp_markers_to_normal_nodes(xm,ym,icn,jcn,x,y,1.0 ./Gm)
+Gn = 1 ./(n2interp[1].data)
+n2interp = interp_markers_to_shear_nodes(xm,ym,icn,jcn,qd,x,y,1.0 ./Gm);
+Gs = 1 ./(n2interp[1].data)
 
+testn = interp_markers_to_normal_nodes(vec(vars["xm"]),vec(vars["ym"]),Int.(vec(vars["icn"])),Int.(vec(vars["jcn"])),vec(vars["x"]),vec(vars["y"]),1 ./vec(vars["Gm"]))
+Gnt=1 ./(testn[1].data)
+
+tests = interp_markers_to_shear_nodes(vec(vars["xm"]),vec(vars["ym"]),Int.(vec(vars["icn"])),Int.(vec(vars["jcn"])),Int.(vec(vars["qd"])),vec(vars["x"]),vec(vars["y"]),1 ./vec(vars["Gm"]))
+Gst = 1 ./(tests[1].data)
 # PROPERTIES FOR PLASTICITY  G.Ito 8/16
 [cohes]=SiStER_get_cohesion(im,ep,MAT); # cohesion depends on plastic strain
 [n2interp] = SiStER_interp_markers_to_normal_nodes(xm,ym,icn,jcn,x,y,cohes);

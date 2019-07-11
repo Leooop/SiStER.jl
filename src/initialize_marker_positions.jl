@@ -38,8 +38,11 @@ end
 
 # visualization :
 
+# inds = (phm .==1)
 # scatter(X,Y)
 # plt1 = scatter(X,Y,label="")
-#     scatter!(xm,ym,ms = 0.5)
-#     #xlims!((4e4,5e4))
-#     #ylims!((0,1.5e4))
+#     scatter!(xm[inds],ym[inds],ms = 0.5)
+#     scatter!(xm[.~inds],ym[.~inds],ms = 0.5)
+#     xlims!((0,5e3))
+#     #ylims!((10e3-2.5e3,10e3+2.5e3))
+#     ylims!((10e3-0.25e3,10e3+0.25e3))
