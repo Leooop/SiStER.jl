@@ -2,6 +2,7 @@
 # Get material properties on nodes from advected properties of markers
 # G.Ito 8/16 - replaces previous version, which relied on marker viscosity
 # for Picard iterations (J.-A.O.)
+# 20% slower than matlab version, mostly due to the absence of an equivalent to matlab's accumarray(). The implementation should be improved. 
 #-------------------------------------------------------------------------
 
 # PHASE PROPORTIONS AT NORMAL AND SHEAR NODES. G.Ito 8/16
