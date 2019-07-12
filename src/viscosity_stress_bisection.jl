@@ -14,7 +14,7 @@ visco0 = get_ductile_rheology_on_nodes_from_stresses(MAT,PARAMS,Ts,sIIOLD_s,phas
 if PARAMS.YNElast==1
     Zs = Gs.*dt_m./(Gs.*dt_m.+visco0)
 else
-    Zs = ones(Ny,Nx)
+    Zs = ones(Float64,Ny,Nx)
 end
 sIINEW = 2.0 .*visco0.*epsII_s.*Zs .+ (1 .- Zs).*sIIOLD_s
 sIIHIGH[sIINEW .> sIIHIGH] .= sIINEW[sIINEW .> sIIHIGH]
@@ -24,7 +24,7 @@ viscoNEW = get_ductile_rheology_on_nodes_from_stresses(MAT,PARAMS,Ts,sIINEW,phas
 if PARAMS.YNElast == 1
     Zs = Gs.*dt_m./(Gs.*dt_m.+viscoNEW)
 else
-    Zs = ones(Ny,Nx)
+    Zs = ones(Float64,Ny,Nx)
 end
 sIINEW = 2.0 .*viscoNEW.*epsII_s.*Zs .+ (1 .- Zs).*sIIOLD_s
 sIIHIGH[sIINEW .> sIIHIGH] .= sIINEW[sIINEW .> sIIHIGH]
@@ -40,7 +40,7 @@ for i = 1:Nbisec
     if PARAMS.YNElast == 1
         Zs = Gs.*dt_m./(Gs.*dt_m .+ visco)
     else
-        Zs = ones(Ny,Nx)
+        Zs = ones(Float64,Ny,Nx)
     end
     sII = 2.0 .*visco.*epsII_s.*Zs .+ (1.-Zs).*sIIOLD_s
 

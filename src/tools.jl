@@ -1,5 +1,5 @@
 ####Tools functions
 
-function sub2ind(lin,i,j)
-    lin[i,j]
-end
+sub2ind(lin,i,j) = lin[i,j]
+
+sub2ind(lin,cart) = lin[cart]

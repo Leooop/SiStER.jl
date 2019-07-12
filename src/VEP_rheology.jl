@@ -56,13 +56,13 @@ if PARAMS.YNElast==1
 
     # and use the stresses to re-update viscosity
     etas_new = get_ductile_rheology_on_nodes_from_stresses(MAT,PARAMS,Ts,sII_s,phase_s)
-    [etan_new(2:end,2:end)]=SiStER_get_ductile_rheology_on_nodes_from_stresses(MAT,PARAMS,Tn(2:end,2:end),sII_n(2:end,2:end),phase_n(2:end,2:end,:));
+    etan_new[2:end,2:end] = get_ductile_rheology_on_nodes_from_stresses(MAT,PARAMS,Tn[2:end,2:end],sII_n[2:end,2:end],phase_n[2:end,2:end,:])
 
 else # if elasticity is off, the strain rate is entirely viscous, so we can use a strain rate-based viscosity law
     # this seems to yield an easier convergence than the bisection
     # algorithm in this case
-    [etas_new]=SiStER_get_ductile_rheology_on_nodes_from_strain_rate(MAT,PARAMS,Ts,epsII_s,phase_s);
-    [etan_new(2:end,2:end)]=SiStER_get_ductile_rheology_on_nodes_from_strain_rate(MAT,PARAMS,Tn(2:end,2:end),epsII_n(2:end,2:end),phase_n(2:end,2:end,:));
+    etas_new = get_ductile_rheology_on_nodes_from_strain_rate(MAT,PARAMS,Ts,epsII_s,phase_s)
+    etan_new[2:end,2:end]=get_ductile_rheology_on_nodes_from_strain_rate(MAT,PARAMS,Tn[2:end,2:end],epsII_n[2:end,2:end],phase_n[2:end,2:end,:])
 
 end
 
@@ -70,14 +70,20 @@ end
 
 ##
 
-if PARAMS.YNPlas==1
+if PARAMS.YNPlas == 1
 
     # identify yielding nodes to update ep
-    s_nodes_yield=find(etas_new>eta_plas_s);
-    n_nodes_yield=find(etan_new>eta_plas_n);
+    s_nodes_yield_cart = findall(etas_new.>eta_plas_s)
+    lin = LinearIndices(etas_new)
+    s_nodes_yield = sub2ind.(Ref(lin),s_nodes_yield_cart)
+
+    n_nodes_yield_cart=findall(etan_new.>eta_plas_n)
+    lin = LinearIndices(etan_new)
+    n_nodes_yield = sub2ind.(Ref(lin),n_nodes_yield_cart)
+
     # incorporate plastic viscosity into effective viscosity
-    etan_new(2:end,2:end)=(1./eta_plas_n(2:end,2:end) + 1./etan_new(2:end,2:end) + 1./PARAMS.etamax).^-1;
-    etas_new=(1./eta_plas_s + 1./etas_new + 1./PARAMS.etamax).^-1;
+    etan_new[2:end,2:end] = (1.0 ./eta_plas_n[2:end,2:end] .+ 1.0 ./etan_new[2:end,2:end] .+ 1.0 ./PARAMS.etamax).^(-1)
+    etas_new = (1.0 ./eta_plas_s .+ 1.0 ./etas_new .+ 1.0 ./PARAMS.etamax).^(-1)
 
     # possible alternative = sharp viscosity drop where yielding occurs (may be less stable)
     # etan_new(n_nodes_yield)=eta_plas_n(n_nodes_yield);
@@ -85,28 +91,28 @@ if PARAMS.YNPlas==1
 
 else
 
-    etan_new(2:end,2:end)=(1./etan_new(2:end,2:end) + 1./PARAMS.etamax).^-1;
-    etas_new=(1./etas_new + 1./PARAMS.etamax).^-1;
+    etan_new[2:end,2:end] = (1.0 ./etan_new[2:end,2:end] .+ 1.0 ./PARAMS.etamax).^(-1)
+    etas_new = (1.0 ./etas_new .+ 1.0 ./PARAMS.etamax).^(-1)
 
 end
 
 
-etan=etan_new;
-etas=etas_new;
-etan(etan<PARAMS.etamin)=PARAMS.etamin;
-etas(etas<PARAMS.etamin)=PARAMS.etamin;
+etan = etan_new
+etas = etas_new
+etan[etan.<PARAMS.etamin] .= PARAMS.etamin
+etas[etas.<PARAMS.etamin] .= PARAMS.etamin
 
 
 #-------------------------------------------------------------------------
 # ELASTICITY TERMS (BASED ON LATEST VISCOSITY)
 #-------------------------------------------------------------------------
-if PARAMS.YNElast==0
-    Zs=ones(size(etas));
-    Zn=ones(size(etan));
+if PARAMS.YNElast == 0
+    Zs = ones(Float64,size(etas))
+    Zn = ones(Float64,size(etan))
 else
-    Zs=Gs*dt_m./(Gs*dt_m+etas);
-    Zn=Gn*dt_m./(Gn*dt_m+etan);
+    Zs = Gs.*dt_m./(Gs.*dt_m .+ etas)
+    Zn = Gn.*dt_m./(Gn.*dt_m .+ etan)
 end
 # right-hand side (1-Z)*sigmaOLD_ij
-srhs_xx=(1-Zn).*sxxOLD;
-srhs_xy=(1-Zs).*sxyOLD;
+srhs_xx = (1.0 .-Zn).*sxxOLD
+srhs_xy = (1.0 .-Zs).*sxyOLD
