@@ -33,12 +33,12 @@ for pit = 1:PARAMS.Npicard_max
     ## ---------------------------------------------------------------------------------
     # Compute visco-elasto-plastic viscosities
     #---------------------------------------------------------------------------------
-    VEP_rheology
+    include("VEP_rheology.jl")
 
     #---------------------------------------------------------------------------------
     # Assemble L and R matrices
     #---------------------------------------------------------------------------------
-    [L, R, Kc, Kb]=SiStER_assemble_L_R(dx,dy,Zs.*etas,Zn.*etan,rho,BC,PARAMS,srhs_xx,srhs_xy); #G.Ito
+    L, R, Kc, Kb = SiStER_assemble_L_R(dx,dy,Zs.*etas,Zn.*etan,rho,BC,PARAMS,srhs_xx,srhs_xy) #G.Ito
 
     #---------------------------------------------------------------------------------
     # Residual:  L and R are from current solution S

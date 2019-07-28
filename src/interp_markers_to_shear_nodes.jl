@@ -5,10 +5,6 @@
 ## Modified by B.Z. Klein, Spring 2014, for speedup
 ### Modified by B.Z. Klein, Summer 2014, for further speedup (vectorized)
 
-# mutable struct DataInterp{T<:Real}
-#     data::Array{T,2}
-# end
-
 function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     Nx=length(x)
@@ -69,12 +65,7 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w1 = accumarray([ICN(cell1)', JCN(cell1)'], wm1, [Ny, Nx]) :
-    w1 = zeros(Float64, (Ny,Nx))
-    ICNp1, JCNp1 = ICN[cell1], JCN[cell1]
-    for i in eachindex(ICNp1)
-        w1[ICNp1[i],JCNp1[i]] += wm1[i]
-    end
-
+    w1 = accumarray(ICN[cell1], JCN[cell1], wm1, (Ny,Nx))
     # cell 2 (i, j-1, 2)
 
     dxm = xm[cell2] .- x[JCN[cell2]]
@@ -84,12 +75,7 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w2 = accumarray([ICN(cell2)', JCN(cell2)'], wm2, [Ny, Nx]);
-    w2 = zeros(Float64, (Ny,Nx))
-    ICNp2, JCNp2 = ICN[cell2], JCN[cell2]
-    for i in eachindex(ICNp2)
-        w2[ICNp2[i],JCNp2[i]] += wm2[i]
-    end
-
+    w2 = accumarray(ICN[cell2], JCN[cell2], wm2, (Ny,Nx))
     # cell 3 (i-1, j-1, 3)
 
     dxm = xm[cell3] .- x[JCN[cell3]]
@@ -99,12 +85,7 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     wm3 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w3 = accumarray([ICN(cell3)', JCN(cell3)'], wm3, [Ny, Nx])
-    w3 = zeros(Float64, (Ny,Nx))
-    ICNp3, JCNp3 = ICN[cell3], JCN[cell3]
-    for i in eachindex(ICNp3)
-        w3[ICNp3[i],JCNp3[i]] += wm3[i]
-    end
-
+    w3 = accumarray(ICN[cell3], JCN[cell3], wm3, (Ny,Nx))
     # cell 4 (i-1, j, 4)
 
     dxm = xm[cell4] .- x[JCN[cell4]]
@@ -114,39 +95,15 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     wm4 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w4 = accumarray([ICN(cell4)', JCN(cell4)'], wm4, [Ny, Nx]);
-    w4 = zeros(Float64, (Ny,Nx))
-    ICNp4, JCNp4 = ICN[cell4], JCN[cell4]
-    for i in eachindex(ICNp4)
-        w4[ICNp4[i],JCNp4[i]] += wm4[i]
-    end
-
+    w4 = accumarray(ICN[cell4], JCN[cell4], wm4, (Ny,Nx))
     ###loop over material properties to interpolate
 
     for vn = 1:numV
 
-        w1_term = zeros(Float64, (Ny,Nx))
-        w2_term = copy(w1_term)
-        w3_term = copy(w1_term)
-        w4_term = copy(w1_term)
-
-        argsp1 = args[vn][cell1].*wm1
-        argsp2 = args[vn][cell2].*wm2
-        argsp3 = args[vn][cell3].*wm3
-        argsp4 = args[vn][cell4].*wm4
-
-
-        for i in eachindex(ICNp1)
-            w1_term[ICNp1[i],JCNp1[i]] += argsp1[i]
-        end
-        for i in eachindex(ICNp2)
-            w2_term[ICNp2[i],JCNp2[i]] += argsp2[i]
-        end
-        for i in eachindex(ICNp3)
-            w3_term[ICNp3[i],JCNp3[i]] += argsp3[i]
-        end
-        for i in eachindex(ICNp4)
-            w4_term[ICNp4[i],JCNp4[i]] += argsp4[i]
-        end
+        w1_term = accumarray(ICN[cell1], JCN[cell1], args[vn][cell1].*wm1, (Ny,Nx))
+        w2_term = accumarray(ICN[cell2], JCN[cell2], args[vn][cell2].*wm2, (Ny,Nx))
+        w3_term = accumarray(ICN[cell3], JCN[cell3], args[vn][cell3].*wm3, (Ny,Nx))
+        w4_term = accumarray(ICN[cell4], JCN[cell4], args[vn][cell4].*wm4, (Ny,Nx))
 
         n2interp[vn] = ((wc1.*w1_term)./w1 +
                             (wc2.*w2_term)./w2 +
@@ -179,11 +136,8 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell1] .- y[ICN[cell1]]
     wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w1 = accumarray([ICN(cell1)', JCN(cell1)'], wm1, [1, Nx]);
-    w1 = zeros(Float64, (1,Nx))
-    ICNp1, JCNp1 = ICN[cell1], JCN[cell1]
-    for i in eachindex(ICNp1)
-        w1[ICNp1[i],JCNp1[i]] += wm1[i]
-    end
+    w1 = accumarray(ICN[cell1], JCN[cell1], wm1, (1,Nx))
+
     # cell 2
 
     cell2 = topEdge .& (quad.==1)
@@ -194,28 +148,14 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell2] .- y[ICN[cell2]]
     wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w2  = accumarray([ICN(cell2)', JCN(cell2)'], wm2, [1, Nx]);
-    w2 = zeros(Float64, (1,Nx))
-    ICNp2, JCNp2 = ICN[cell2], JCN[cell2]
-    for i in eachindex(ICNp2)
-        w2[ICNp2[i],JCNp2[i]] += wm2[i]
-    end
+    w2 = accumarray(ICN[cell2], JCN[cell2], wm2, (1,Nx))
 
     #loop over material properties to interpolate
 
     for vn = 1:numV
 
-        w1_term = zeros(Float64, (1,Nx))
-        w2_term = copy(w1_term)
-
-        argsp1 = args[vn][cell1].*wm1
-        argsp2 = args[vn][cell2].*wm2
-
-        for i in eachindex(ICNp1)
-            w1_term[ICNp1[i],JCNp1[i]] += argsp1[i]
-        end
-        for i in eachindex(ICNp2)
-            w2_term[ICNp2[i],JCNp2[i]] += argsp2[i]
-        end
+        w1_term = accumarray(ICN[cell1], JCN[cell1], args[vn][cell1].*wm1, (1,Nx))
+        w2_term = accumarray(ICN[cell2], JCN[cell2], args[vn][cell2].*wm2, (1,Nx))
 
         n2interp[vn][1,:] = ((wc1.*w1_term)./w1 +
                         (wc2.*w2_term)./w2) ./ (wc1+wc2)
@@ -241,12 +181,7 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell1] .- y[end-1]
     wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w1 = accumarray([ones(sum(cell1),1), JCN(cell1)'], wm1, [1, Nx]);
-    w1 = zeros(Float64, (1,Nx))
-    ICNp1, JCNp1 = ones(Int,sum(cell1)), JCN[cell1]
-    for i in eachindex(ICNp1)
-        w1[ICNp1[i],JCNp1[i]] += wm1[i]
-    end
-
+    w1 = accumarray(ones(Int,sum(cell1)), JCN[cell1], wm1, (1,Nx))
     # cell 2
 
     cell2 = bottomEdge .& (quad.==4)
@@ -257,28 +192,14 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell2] .- y[end-1]
     wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w2  = accumarray([ones(sum(cell2),1), JCN(cell2)'], wm2, [1, Nx]);
-    w2 = zeros(Float64, (1,Nx))
-    ICNp2, JCNp2 = ones(Int,sum(cell2)), JCN[cell2]
-    for i in eachindex(ICNp2)
-        w2[ICNp2[i],JCNp2[i]] += wm2[i]
-    end
+    w1 = accumarray(ones(Int,sum(cell2)), JCN[cell2], wm2, (1,Nx))
 
     ##loop over material properties to interpolate
 
     for vn = 1:numV
 
-        w1_term = zeros(Float64, (1,Nx))
-        w2_term = copy(w1_term)
-
-        argsp1 = args[vn][cell1].*wm1
-        argsp2 = args[vn][cell2].*wm2
-
-        for i in eachindex(ICNp1)
-            w1_term[ICNp1[i],JCNp1[i]] += argsp1[i]
-        end
-        for i in eachindex(ICNp2)
-            w2_term[ICNp2[i],JCNp2[i]] += argsp2[i]
-        end
+        w1_term = accumarray(ones(Int,sum(cell1)), JCN[cell1], args[vn][cell1].*wm1, (1,Nx))
+        w2_term = accumarray(ones(Int,sum(cell2)), JCN[cell2], args[vn][cell2].*wm2, (1,Nx))
 
         n2interp[vn][Ny,:] = ((wc1.*w1_term)./w1 .+
                         (wc2.*w2_term)./w2) ./ (wc1+wc2)
@@ -304,12 +225,7 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell1] .- y[ICN[cell1]]
     wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w1 = accumarray([ICN(cell1)', ones(sum(cell1),1)], wm1, [Ny, 1]);
-    w1 = zeros(Float64, (Ny,1))
-    ICNp1, JCNp1 = ICN[cell1], ones(Int,sum(cell1))
-    for i in eachindex(ICNp1)
-        w1[ICNp1[i],JCNp1[i]] += wm1[i]
-    end
-
+    w1 = accumarray(ICN[cell1], ones(Int,sum(cell1)), wm1, (Ny,1))
 
     # cell 2
 
@@ -321,28 +237,14 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell2] .- y[ICN[cell2]]
     wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w2 = accumarray([ICN(cell2)', ones(sum(cell2),1)], wm2, [Ny, 1]);
-    w2 = zeros(Float64, (Ny,1))
-    ICNp2, JCNp2 = ICN[cell2], ones(Int,sum(cell2))
-    for i in eachindex(ICNp2)
-        w2[ICNp2[i],JCNp2[i]] += wm2[i]
-    end
+    w2 = accumarray(ICN[cell2], ones(Int,sum(cell2)), wm2, (Ny,1))
 
     ##loop over material properties to interpolate
 
     for vn = 1:numV
 
-        w1_term = zeros(Float64, (Ny,1))
-        w2_term = copy(w1_term)
-
-        argsp1 = args[vn][cell1].*wm1
-        argsp2 = args[vn][cell2].*wm2
-
-        for i in eachindex(ICNp1)
-            w1_term[ICNp1[i],JCNp1[i]] += argsp1[i]
-        end
-        for i in eachindex(ICNp2)
-            w2_term[ICNp2[i],JCNp2[i]] += argsp2[i]
-        end
+        w1_term = accumarray(ICN[cell1], ones(Int,sum(cell1)), args[vn][cell1].*wm1, (Ny,1))
+        w2_term = accumarray(ICN[cell2], ones(Int,sum(cell2)), args[vn][cell2].*wm2, (Ny,1))
 
         n2interp[vn][:, 1] = ((wc1.*w1_term)./w1 +
                         (wc2.*w2_term)./w2) ./ (wc1+wc2)
@@ -368,12 +270,7 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell1] .- y[ICN[cell1]]
     wm1 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w1 = accumarray([ICN(cell1)', ones(sum(cell1),1)], wm1, [Ny, 1]);
-    w1 = zeros(Float64, (Ny,1))
-    ICNp1, JCNp1 = ICN[cell1], ones(Int,sum(cell1))
-    for i in eachindex(ICNp1)
-        w1[ICNp1[i],JCNp1[i]] += wm1[i]
-    end
-
+    w1 = accumarray(ICN[cell1], ones(Int,sum(cell1)), wm1, (Ny,1))
     # cell 2
 
     cell2 = rightEdge .& (quad.==2)
@@ -384,28 +281,14 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell2] .- y[ICN[cell2]]
     wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w2 = accumarray([ICN(cell2)', ones(sum(cell2),1)], wm2, [Ny, 1]);
-    w2 = zeros(Float64, (Ny,1))
-    ICNp2, JCNp2 = ICN[cell2], ones(Int,sum(cell2))
-    for i in eachindex(ICNp2)
-        w2[ICNp2[i],JCNp2[i]] += wm2[i]
-    end
+    w2 = accumarray(ICN[cell2], ones(Int,sum(cell2)), wm2, (Ny,1))
 
     ##loop over material properties to interpolate
 
     for vn = 1:numV
 
-        w1_term = zeros(Float64, (Ny,1))
-        w2_term = copy(w1_term)
-
-        argsp1 = args[vn][cell1].*wm1
-        argsp2 = args[vn][cell2].*wm2
-
-        for i in eachindex(ICNp1)
-            w1_term[ICNp1[i],JCNp1[i]] += argsp1[i]
-        end
-        for i in eachindex(ICNp2)
-            w2_term[ICNp2[i],JCNp2[i]] += argsp2[i]
-        end
+        w1_term = accumarray(ICN[cell1], ones(Int,sum(cell1)), args[vn][cell1].*wm1, (Ny,1))
+        w2_term = accumarray(ICN[cell2], ones(Int,sum(cell2)), args[vn][cell2].*wm2, (Ny,1))
 
         n2interp[vn][:,Nx] = ((wc1.*w1_term)./w1 +
                         (wc2.*w2_term)./w2) ./ (wc1+wc2)

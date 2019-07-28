@@ -16,134 +16,65 @@ function test()
 end
 @btime test()
 
+function acump()
+    n2interp = Vector{Matrix{Float64}}(undef,1)
+    for vn = 1:1
 
-function loop1()
-    phasesS = Array{Float64,3}(undef,Ny,Nx,PARAMS.Nphase)
-    for n = 1:PARAMS.Nphase
-        w1_term = zeros(Float64, (Ny,Nx))
-        w2_term = copy(w1_term)
-        w3_term = copy(w1_term)
-        w4_term = copy(w1_term)
+        w1_term = Threads.@spawn accumarray(ICN[cell1], JCN[cell1],
+            args[vn][cell1].*wm1, (Ny,Nx))
+        w2_term = Threads.@spawn accumarray(ICN[cell2], JCN[cell2],
+            args[vn][cell2].*wm2, (Ny,Nx))
+        w3_term = Threads.@spawn accumarray(ICN[cell3], JCN[cell3],
+            args[vn][cell3].*wm3, (Ny,Nx))
+        w4_term = Threads.@spawn accumarray(ICN[cell4], JCN[cell4],
+            args[vn][cell4].*wm4, (Ny,Nx))
 
-        phaseMask = (phases .== n)
+        # wait(t1)
+        # wait(t2)
+        # wait(t3)
+        # wait(t4)
 
-        ICNp, JCNp, wm1p = ICN[cell1 .& phaseMask], JCN[cell1 .& phaseMask], wm1[phaseMask[cell1]]
-        for i in eachindex(ICNp)
-            w1_term[ICNp[i],JCNp[i]] += wm1p[i]
-        end
-        ICNp, JCNp, wm2p = ICN[cell2 .& phaseMask], JCN[cell2 .& phaseMask], wm2[phaseMask[cell2]]
-        for i in eachindex(ICNp)
-            w2_term[ICNp[i],JCNp[i]] += wm2p[i]
-        end
-        ICNp, JCNp, wm3p = ICN[cell3 .& phaseMask], JCN[cell3 .& phaseMask], wm3[phaseMask[cell3]]
-        for i in eachindex(ICNp)
-            w3_term[ICNp[i],JCNp[i]] += wm3p[i]
-        end
-        ICNp, JCNp, wm4p = ICN[cell4 .& phaseMask], JCN[cell4 .& phaseMask], wm4[phaseMask[cell4]]
-        for i in eachindex(ICNp)
-            w4_term[ICNp[i],JCNp[i]] += wm4p[i]
-        end
+        n2interp[vn] = ((wc1.*fetch(w1_term))./w1 +
+                            (wc2.*fetch(w2_term))./w2 +
+                            (wc3.*fetch(w3_term))./w3 +
+                            (wc4.*fetch(w4_term))./w4 )./ (wc1+wc2+wc4+wc4)
 
-        phasesS[:,:,n] = ((wc1.*w1_term)./w1 +
-                        (wc2.*w2_term)./w2 +
-                        (wc3.*w3_term)./w3 +
-                        (wc4.*w4_term)./w4 )./ (wc1+wc2+wc4+wc4)
-
+        # n2interp(vn).data = (wc1*accumarray([ICN(cell1)', JCN(cell1)'], args{vn}(cell1).*wm1)./w1 + ...
+        #     wc2*accumarray([ICN(cell2)', JCN(cell2)'], args{vn}(cell2).*wm2)./w2 + ...
+        #     wc3*accumarray([ICN(cell3)', JCN(cell3)'], args{vn}(cell3).*wm3)./w3 + ...
+        #     wc4*accumarray([ICN(cell4)', JCN(cell4)'], args{vn}(cell4).*wm4)./w4)./...
+        #     (wc1+wc2+wc4+wc4);
     end
-    return phasesS
+    return n2interp
 end
 
-@everywhere function inner_func(n,Nx,Ny,ICN,JCN,wm1,wm2,wm3,wm4,w1,w2,w3,w4)
-    w1_term = zeros(Float64, (Ny,Nx))
-    w2_term = copy(w1_term)
-    w3_term = copy(w1_term)
-    w4_term = copy(w1_term)
+function acum()
+    n2interp = Vector{Matrix{Float64}}(undef,1)
+    for vn = 1:1
 
-    phaseMask = (phases .== n)
+        w1_term = accumarray(ICN[cell1], JCN[cell1], args[vn][cell1].*wm1, (Ny,Nx))
+        w2_term = accumarray(ICN[cell2], JCN[cell2], args[vn][cell2].*wm2, (Ny,Nx))
+        w3_term = accumarray(ICN[cell3], JCN[cell3], args[vn][cell3].*wm3, (Ny,Nx))
+        w4_term = accumarray(ICN[cell4], JCN[cell4], args[vn][cell4].*wm4, (Ny,Nx))
 
-    ICNp, JCNp, wm1p = ICN[cell1 .& phaseMask], JCN[cell1 .& phaseMask], wm1[phaseMask[cell1]]
-    for i in eachindex(ICNp)
-        w1_term[ICNp[i],JCNp[i]] += wm1p[i]
-    end
-    ICNp, JCNp, wm2p = ICN[cell2 .& phaseMask], JCN[cell2 .& phaseMask], wm2[phaseMask[cell2]]
-    for i in eachindex(ICNp)
-        w2_term[ICNp[i],JCNp[i]] += wm2p[i]
-    end
-    ICNp, JCNp, wm3p = ICN[cell3 .& phaseMask], JCN[cell3 .& phaseMask], wm3[phaseMask[cell3]]
-    for i in eachindex(ICNp)
-        w3_term[ICNp[i],JCNp[i]] += wm3p[i]
-    end
-    ICNp, JCNp, wm4p = ICN[cell4 .& phaseMask], JCN[cell4 .& phaseMask], wm4[phaseMask[cell4]]
-    for i in eachindex(ICNp)
-        w4_term[ICNp[i],JCNp[i]] += wm4p[i]
-    end
+        n2interp[vn] = ((wc1.*w1_term)./w1 +
+                            (wc2.*w2_term)./w2 +
+                            (wc3.*w3_term)./w3 +
+                            (wc4.*w4_term)./w4 )./ (wc1+wc2+wc4+wc4)
 
-    return ((wc1.*w1_term)./w1 +
-                    (wc2.*w2_term)./w2 +
-                    (wc3.*w3_term)./w3 +
-                    (wc4.*w4_term)./w4 )./ (wc1+wc2+wc4+wc4)
+        # n2interp(vn).data = (wc1*accumarray([ICN(cell1)', JCN(cell1)'], args{vn}(cell1).*wm1)./w1 + ...
+        #     wc2*accumarray([ICN(cell2)', JCN(cell2)'], args{vn}(cell2).*wm2)./w2 + ...
+        #     wc3*accumarray([ICN(cell3)', JCN(cell3)'], args{vn}(cell3).*wm3)./w3 + ...
+        #     wc4*accumarray([ICN(cell4)', JCN(cell4)'], args{vn}(cell4).*wm4)./w4)./...
+        #     (wc1+wc2+wc4+wc4);
+    end
+    return n2interp
 end
 
-function loopn()
-    begin
-        phases_vec = collect(1:PARAMS.Nphase)
-        interm = pmap(n->inner_func(n), 1:PARAMS.Nphase, distributed = false)
-        cat(interm[1],interm[2],interm[3],dims = 3)
-    end
-end
 
-function loopn2()
-    interm = Vector{Array{Float64,2}}(undef,PARAMS.Nphase)
-    @sync begin
-        @async for n = 1:PARAMS.Nphase
-                    f = @spawn inner_func(n,Nx,Ny,ICN,JCN,wm1,wm2,wm3,wm4,w1,w2,w3,w4)
-                    interm[n] = fetch(f)
-                end
-    end
-    return cat(interm[1],interm[2],interm[3],dims = 3)
-end
+p1 = @benchmark acum()
+ps = @benchmark acump()
 
-using SharedArrays
-function loop3n()
-    phasesS = SharedArray{Float64,3}((Ny,Nx,PARAMS.Nphase))
-    @distributed for n = 1:PARAMS.Nphase
-        w1_term = zeros(Float64, (Ny,Nx))
-        w2_term = copy(w1_term)
-        w3_term = copy(w1_term)
-        w4_term = copy(w1_term)
-
-        phaseMask = (phases .== n)
-
-        ICNp, JCNp, wm1p = ICN[cell1 .& phaseMask], JCN[cell1 .& phaseMask], wm1[phaseMask[cell1]]
-        for i in eachindex(ICNp)
-            w1_term[ICNp[i],JCNp[i]] += wm1p[i]
-        end
-        ICNp, JCNp, wm2p = ICN[cell2 .& phaseMask], JCN[cell2 .& phaseMask], wm2[phaseMask[cell2]]
-        for i in eachindex(ICNp)
-            w2_term[ICNp[i],JCNp[i]] += wm2p[i]
-        end
-        ICNp, JCNp, wm3p = ICN[cell3 .& phaseMask], JCN[cell3 .& phaseMask], wm3[phaseMask[cell3]]
-        for i in eachindex(ICNp)
-            w3_term[ICNp[i],JCNp[i]] += wm3p[i]
-        end
-        ICNp, JCNp, wm4p = ICN[cell4 .& phaseMask], JCN[cell4 .& phaseMask], wm4[phaseMask[cell4]]
-        for i in eachindex(ICNp)
-            w4_term[ICNp[i],JCNp[i]] += wm4p[i]
-        end
-
-        phasesS[:,:,n] = ((wc1.*w1_term)./w1 +
-                        (wc2.*w2_term)./w2 +
-                        (wc3.*w3_term)./w3 +
-                        (wc4.*w4_term)./w4 )./ (wc1+wc2+wc4+wc4)
-
-    end
-    return phasesS
-end
-
-p1 = @benchmark loop1()
-pn = @benchmark loopn()
-p2n = @benchmark loop2n()
-p3n = @benchmark loop3n()
 
 
 using SharedArrays
@@ -153,17 +84,65 @@ n = 100000
 
 function testn(n)
     A = Vector{Float64}(undef,n)
-    @time Threads.@threads for i = 1:n
+    Threads.@threads for i = 1:n
         A[i] = sqrt(i/pi)
     end
+    return A
+end
+
+function testn1(n)
+    A = Vector{Float64}(undef,n)
+    Threads.@spawn for i = 1:n
+        A[i] = sqrt(i/pi)
+    end
+    return A
 end
 
 function test1(n)
     A = Vector{Float64}(undef,n)
-    @time for i = 1:n
+    for i = 1:n
         A[i] = sqrt(i/pi)
     end
+    return A
 end
 
-testn(n)
-test1(n)
+function testn3(n)
+    A = 0
+    p = Threads.@spawn for i = 1:n
+        A += i
+    end
+    #wait(p)
+    return A
+end
+
+function test3(n)
+    A = 0
+    for i = 1:n
+        A += i
+    end
+    return A
+end
+
+@time test1(n)
+@time testn(n)
+@time testn1(n)
+@time testn3(n)
+@time test3(n)
+
+test = [1 2 ; 3 4]
+fv() = @view test[:,1]
+f() = test[:,1]
+
+@benchmark fv()
+@benchmark f()
+
+function acum()
+    ICNp, JCNp = ICN[cell1], JCN[cell1]
+    w1 = zeros(Float64, (Ny,Nx))
+    for i in eachindex(ICNp)
+        w1[ICNp[i],JCNp[i]] += wm1[i]
+    end
+end
+@benchmark acum()
+
+@benchmark accumarray(ICN[cell1], JCN[cell1], wm1, (Ny,Nx))
