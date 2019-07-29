@@ -10,8 +10,10 @@ module SiStER
 # standard :
 using Random: randperm
 using Statistics: mean
+using SparseArrays
 
 import Base.Threads.@spawn
+import LinearAlgebra.norm
 
 # third-party :
 using LazyJSON: PropertyDict

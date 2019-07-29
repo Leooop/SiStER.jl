@@ -38,20 +38,21 @@ for pit = 1:PARAMS.Npicard_max
     #---------------------------------------------------------------------------------
     # Assemble L and R matrices
     #---------------------------------------------------------------------------------
-    L, R, Kc, Kb = SiStER_assemble_L_R(dx,dy,Zs.*etas,Zn.*etan,rho,BC,PARAMS,srhs_xx,srhs_xy) #G.Ito
+    L, R, Kc, Kb=assemble_L_R(dx,dy,x,y,xm,ym,phm,Zs.*etas,Zn.*etan,rho,BC,PARAMS,GEOM,srhs_xx,srhs_xy); #G.Ito
 
     #---------------------------------------------------------------------------------
     # Residual:  L and R are from current solution S
     #---------------------------------------------------------------------------------
-    if (exist('S','var'));
-        Res=L*S-R;
-        ResL2=norm(Res,2)/norm(R,2);
+    if @isdefined S
+        Res = L*S-R
+        ResL2 = norm(Res,2)/norm(R,2)
 
     else
 
-        S=L\R; disp('First solve is linearized');
-        Res=L*S-R;
-        ResL2=norm(Res,2)/norm(R,2);
+        S = L\R
+		println("First solve is linearized")
+        Res = L*S-R
+        ResL2 = norm(Res,2)/norm(R,2)
 
 
     end
@@ -60,36 +61,36 @@ for pit = 1:PARAMS.Npicard_max
     # combination of the two
     #---------------------------------------------------------------------------------
 
-    if (pit >= PARAMS.pitswitch);
-       if pit==PARAMS.pitswitch; disp('switching from Picard to approx. Newton'); end;
-       beta=1;
-       S=S-beta.*(L\Res);  # approximate Newton update, with L as approximation to Jacobian
-       it_type='Newton: ';
+    if pit >= PARAMS.pitswitch
+       pit == PARAMS.pitswitch && println("switching from Picard to approx. Newton")
+       beta = 1
+       S = S-beta.*(L\Res)  # approximate Newton update, with L as approximation to Jacobian
+       it_type = "Newton: "
     else
-       S=L\R; # Picard update
-       it_type='Picard: ';
+       S = L\R # Picard update
+       it_type = "Picard: "
     end
 
-    [p, vx, vy]=SiStER_reshape_solver_output(S,Kc,Nx,Ny);
+    p, vx, vy = SiStER_reshape_solver_output(S,Kc,Nx,Ny)
 
     ## ASSESS CONVERGENCE
-    if(ResL2<PARAMS.conv_crit_ResL2 && pit >= PARAMS.Npicard_min)
-        disp(['Final residual = ' num2str(ResL2)])
-        disp([num2str(pit) ' iterations converged: L2 norm of residual dropped below ' num2str( PARAMS.conv_crit_ResL2)]);
-        break;
-	elseif (pit==PARAMS.Npicard_max);
-        disp(['Final residual = ' num2str(ResL2)])
-        disp(['WARNING! ' num2str(pit) ' Picard / approx. Newton iterations failed to converge within tolerance of ' num2str( PARAMS.conv_crit_ResL2)]);
+    if (ResL2<PARAMS.conv_crit_ResL2 && pit >= PARAMS.Npicard_min)
+        println("Final residual = ", string(ResL2))
+        println(string(pit), "iterations converged: L2 norm of residual dropped below ", string(PARAMS.conv_crit_ResL2))
+        break
+	elseif (pit==PARAMS.Npicard_max)
+        println("Final residual = ", string(ResL2))
+        println("WARNING! ", string(pit), " Picard / approx. Newton iterations failed to converge within tolerance of " string(PARAMS.conv_crit_ResL2))
     end
 
 
 ## get strain rate on nodes current solution
-[EXX,EXY]=SiStER_get_strain_rate(vx,vy,dx,dy,BC);
+EXX,EXY=get_strain_rate(vx,vy,dx,dy,BC)
 
-EXY_n=SiStER_interp_shear_to_normal_nodes(EXY);
-EXX_s=SiStER_interp_normal_to_shear_nodes(EXX,dx,dy);
-epsII_n=sqrt(EXX.^2+EXY_n.^2);
-epsII_s=sqrt(EXX_s.^2+EXY.^2);
+EXY_n=interp_shear_to_normal_nodes(EXY)
+EXX_s=interp_normal_to_shear_nodes(EXX,dx,dy)
+epsII_n=sqrt.(EXX.^2 .+ EXY_n.^2)
+epsII_s=sqrt.(EXX_s.^2 .+ EXY.^2)
 
 
 
@@ -100,7 +101,7 @@ epsII_s=sqrt(EXX_s.^2+EXY.^2);
 # axis equal
 # caxis([18 25])
 # colorbar
-# title(num2str(pit))
+# title(string(pit))
 # pause(.001)
 
 # RESIDUAL FOR INDIVIDUAL VARIABLES
@@ -110,7 +111,7 @@ epsII_s=sqrt(EXX_s.^2+EXY.^2);
 # set(gca,'ydir','reverse')
 # axis equal
 # colorbar
-# title(num2str(pit))
+# title(string(pit))
 # pause(.001)
 
 

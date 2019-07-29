@@ -57,7 +57,7 @@ function interp_phases_to_shear_nodes_parallel(xm,ym,icn,jcn,quad,x,y,phases,PAR
     #w1 = accumarray([ICN(cell1)', JCN(cell1)'], wm1, [Ny, Nx]) :
     w1 = zeros(Float64, (Ny,Nx))
     ICNp, JCNp = ICN[cell1], JCN[cell1]
-    for i in eachindex(ICNp) # faster without multithreading
+    for i in eachindex(ICNp)
         w1[ICNp[i],JCNp[i]] += wm1[i]
     end
     # cell 2 (i, j-1, 2)
@@ -107,7 +107,7 @@ function interp_phases_to_shear_nodes_parallel(xm,ym,icn,jcn,quad,x,y,phases,PAR
 
     #loop over material properties to interpolate
 
-    Threads.@threads for n = 1:PARAMS.Nphase
+    for n = 1:PARAMS.Nphase
         w1_term = zeros(Float64, (Ny,Nx))
         w2_term = copy(w1_term)
         w3_term = copy(w1_term)
@@ -179,7 +179,7 @@ function interp_phases_to_shear_nodes_parallel(xm,ym,icn,jcn,quad,x,y,phases,PAR
 
     #loop over material properties to interpolate
 
-    Threads.@threads for n = 1:PARAMS.Nphase
+    for n = 1:PARAMS.Nphase
 
         w1_term = zeros(Float64, (1,Nx))
         w2_term = copy(w1_term)
@@ -238,7 +238,7 @@ function interp_phases_to_shear_nodes_parallel(xm,ym,icn,jcn,quad,x,y,phases,PAR
     end
     #loop over material properties to interpolate
 
-    Threads.@threads for n = 1:PARAMS.Nphase
+    for n = 1:PARAMS.Nphase
 
         w1_term = zeros(Float64, (1,Nx))
         w2_term = copy(w1_term)
@@ -303,7 +303,7 @@ function interp_phases_to_shear_nodes_parallel(xm,ym,icn,jcn,quad,x,y,phases,PAR
 
     #loop over material properties to interpolate
 
-    Threads.@threads for n = 1:PARAMS.Nphase
+    for n = 1:PARAMS.Nphase
 
         w1_term = zeros(Float64, (Ny,1))
         w2_term = copy(w1_term)
@@ -367,7 +367,7 @@ function interp_phases_to_shear_nodes_parallel(xm,ym,icn,jcn,quad,x,y,phases,PAR
 
     #loop over material properties to interpolate
 
-    Threads.@threads for n = 1:PARAMS.Nphase
+    for n = 1:PARAMS.Nphase
 
         w1_term = zeros(Float64, (Ny,1))
         w2_term = copy(w1_term)

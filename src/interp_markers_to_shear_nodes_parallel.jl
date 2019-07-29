@@ -5,7 +5,11 @@
 ## Modified by B.Z. Klein, Spring 2014, for speedup
 ### Modified by B.Z. Klein, Summer 2014, for further speedup (vectorized)
 
-function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
+# mutable struct DataInterp{T<:Real}
+#     data::Array{T,2}
+# end
+
+function interp_markers_to_shear_nodes_parallel(xm,ym,icn,jcn,quad,x,y,args...)
 
     Nx=length(x)
     Ny=length(y)
@@ -18,7 +22,8 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     ### MITTELSTAEDT ### establish interpolants matrices
     #n2interp = repmat(struct('data', zeros(Ny,Nx)), 1, numV);
-    n2interp = [zeros(Float64,Ny,Nx) for i = 1:numV]
+    n2interp = Vector{Matrix{Float64}}(undef,numV)
+
 
     # Create interpolation object for the index with nearnest (Constant()) parametrization
     itpX = interpolate((x,), 1:length(x), Gridded(Constant()))
@@ -99,15 +104,21 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     for vn = 1:numV
 
-        w1_term = accumarray(ICN[cell1], JCN[cell1], args[vn][cell1].*wm1, (Ny,Nx))
-        w2_term = accumarray(ICN[cell2], JCN[cell2], args[vn][cell2].*wm2, (Ny,Nx))
-        w3_term = accumarray(ICN[cell3], JCN[cell3], args[vn][cell3].*wm3, (Ny,Nx))
-        w4_term = accumarray(ICN[cell4], JCN[cell4], args[vn][cell4].*wm4, (Ny,Nx))
+        w1_term = @spawn accumarray(ICN[cell1], JCN[cell1],
+            args[vn][cell1].*wm1, (Ny,Nx))
+        w2_term = @spawn accumarray(ICN[cell2], JCN[cell2],
+            args[vn][cell2].*wm2, (Ny,Nx))
+        w3_term = @spawn accumarray(ICN[cell3], JCN[cell3],
+            args[vn][cell3].*wm3, (Ny,Nx))
+        w4_term = @spawn accumarray(ICN[cell4], JCN[cell4],
+            args[vn][cell4].*wm4, (Ny,Nx))
 
-        n2interp[vn] = ((wc1.*w1_term)./w1 +
-                            (wc2.*w2_term)./w2 +
-                            (wc3.*w3_term)./w3 +
-                            (wc4.*w4_term)./w4 )./ (wc1+wc2+wc4+wc4)
+
+
+        n2interp[vn] = ((wc1.*fetch(w1_term))./w1 +
+                            (wc2.*fetch(w2_term))./w2 +
+                            (wc3.*fetch(w3_term))./w3 +
+                            (wc4.*fetch(w4_term))./w4 )./ (wc1+wc2+wc4+wc4)
 
         # n2interp(vn).data = (wc1*accumarray([ICN(cell1)', JCN(cell1)'], args{vn}(cell1).*wm1)./w1 + ...
         #     wc2*accumarray([ICN(cell2)', JCN(cell2)'], args{vn}(cell2).*wm2)./w2 + ...
@@ -153,11 +164,11 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     for vn = 1:numV
 
-        w1_term = accumarray(ICN[cell1], JCN[cell1], args[vn][cell1].*wm1, (1,Nx))
-        w2_term = accumarray(ICN[cell2], JCN[cell2], args[vn][cell2].*wm2, (1,Nx))
+        w1_term = @spawn accumarray(ICN[cell1], JCN[cell1], args[vn][cell1].*wm1, (1,Nx))
+        w2_term = @spawn accumarray(ICN[cell2], JCN[cell2], args[vn][cell2].*wm2, (1,Nx))
 
-        n2interp[vn][1,:] = ((wc1.*w1_term)./w1 +
-                        (wc2.*w2_term)./w2) ./ (wc1+wc2)
+        n2interp[vn][1,:] = ((wc1.*fetch(w1_term))./w1 +
+                        (wc2.*fetch(w2_term))./w2) ./ (wc1+wc2)
 
         # temp = (wc1*accumarray([ICN(cell1)', JCN(cell1)'], args{vn}(cell1).*wm1)./w1 + ...
         #     wc2*accumarray([ICN(cell2)', JCN(cell2)'], args{vn}(cell2).*wm2)./w2)/...
@@ -191,17 +202,17 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
     dym = ym[cell2] .- y[end-1]
     wm2 = 1 .- (dxm.*dym .+ (ddx.-dxm).*dym .+ (ddy.-dym).*dxm)./(ddx.*ddy)
     #w2  = accumarray([ones(sum(cell2),1), JCN(cell2)'], wm2, [1, Nx]);
-    w2 = accumarray(ones(Int,sum(cell2)), JCN[cell2], wm2, (1,Nx))
+    w1 = accumarray(ones(Int,sum(cell2)), JCN[cell2], wm2, (1,Nx))
 
     ##loop over material properties to interpolate
 
     for vn = 1:numV
 
-        w1_term = accumarray(ones(Int,sum(cell1)), JCN[cell1], args[vn][cell1].*wm1, (1,Nx))
-        w2_term = accumarray(ones(Int,sum(cell2)), JCN[cell2], args[vn][cell2].*wm2, (1,Nx))
+        w1_term = @spawn accumarray(ones(Int,sum(cell1)), JCN[cell1], args[vn][cell1].*wm1, (1,Nx))
+        w2_term = @spawn accumarray(ones(Int,sum(cell2)), JCN[cell2], args[vn][cell2].*wm2, (1,Nx))
 
-        n2interp[vn][Ny,:] = ((wc1.*w1_term)./w1 .+
-                        (wc2.*w2_term)./w2) ./ (wc1+wc2)
+        n2interp[vn][Ny,:] = ((wc1.*fetch(w1_term))./w1 .+
+                        (wc2.*fetch(w2_term))./w2) ./ (wc1+wc2)
 
         # temp = (wc1*accumarray([ones(sum(cell1),1), JCN(cell1)'], args{vn}(cell1).*wm1)./w1 + ...
         #     wc2*accumarray([ones(sum(cell2),1), JCN(cell2)'], args{vn}(cell2).*wm2)./w2)/...
@@ -242,11 +253,11 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     for vn = 1:numV
 
-        w1_term = accumarray(ICN[cell1], ones(Int,sum(cell1)), args[vn][cell1].*wm1, (Ny,1))
-        w2_term = accumarray(ICN[cell2], ones(Int,sum(cell2)), args[vn][cell2].*wm2, (Ny,1))
+        w1_term = @spawn accumarray(ICN[cell1], ones(Int,sum(cell1)), args[vn][cell1].*wm1, (Ny,1))
+        w2_term = @spawn accumarray(ICN[cell2], ones(Int,sum(cell2)), args[vn][cell2].*wm2, (Ny,1))
 
-        n2interp[vn][:, 1] = ((wc1.*w1_term)./w1 +
-                        (wc2.*w2_term)./w2) ./ (wc1+wc2)
+        n2interp[vn][:, 1] = ((wc1.*fetch(w1_term))./w1 +
+                        (wc2.*fetch(w2_term))./w2) ./ (wc1+wc2)
 
         # temp = (wc1*accumarray([ICN(cell1)', ones(sum(cell1),1)], args{vn}(cell1).*wm1)./w1 + ...
         #     wc2*accumarray([ICN(cell2)', ones(sum(cell2),1)], args{vn}(cell2).*wm2)./w2)/...
@@ -286,11 +297,11 @@ function interp_markers_to_shear_nodes(xm,ym,icn,jcn,quad,x,y,args...)
 
     for vn = 1:numV
 
-        w1_term = accumarray(ICN[cell1], ones(Int,sum(cell1)), args[vn][cell1].*wm1, (Ny,1))
-        w2_term = accumarray(ICN[cell2], ones(Int,sum(cell2)), args[vn][cell2].*wm2, (Ny,1))
+        w1_term = @spawn accumarray(ICN[cell1], ones(Int,sum(cell1)), args[vn][cell1].*wm1, (Ny,1))
+        w2_term = @spawn accumarray(ICN[cell2], ones(Int,sum(cell2)), args[vn][cell2].*wm2, (Ny,1))
 
-        n2interp[vn][:,Nx] = ((wc1.*w1_term)./w1 +
-                        (wc2.*w2_term)./w2) ./ (wc1+wc2)
+        n2interp[vn][:,Nx] = ((wc1.*fetch(w1_term))./w1 +
+                        (wc2.*fetch(w2_term))./w2) ./ (wc1+wc2)
 
         # temp = (wc1*accumarray([ICN(cell1)', ones(sum(cell1),1)], args{vn}(cell1).*wm1)./w1 + ...
         #     wc2*accumarray([ICN(cell2)', ones(sum(cell2),1)], args{vn}(cell2).*wm2)./w2)/...

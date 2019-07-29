@@ -1,20 +1,20 @@
-# Fill LHS and RHS Solution Matrices
+function assemble_L_R(dx,dy,x,y,xm,ym,phm,etas,etan,rho,BC,PARAMS,GEOM,srhs_xx,srhs_xy)
 
-function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
+    ## Fill LHS and RHS Solution Matrices
 
-    p0cell = PARAMS.p0cell
+    p0cell=PARAMS.p0cell
 
-    Nx = length(dx) + 1
-    Ny = length(dy) + 1
+    Nx = length(dx)+1
+    Ny = length(dy)+1
 
     gx = PARAMS.gx
     gy = PARAMS.gy
 
     # Vector of right part initialization
-    R = zeros(Float64, Nx*Ny*3, 1)
-    Lii = zeros(Float64, 10*Nx*Ny*3, 1)
-    Ljj = zeros(Float64, 10*Nx*Ny*3, 1)
-    Lvv = zeros(Float64, 10*Nx*Ny*3, 1)
+    R=zeros(Float64, Nx*Ny*3)
+    Lii = zeros(Float64, 10*Nx*Ny*3)
+    Ljj = zeros(Float64, 10*Nx*Ny*3)
+    Lvv = zeros(Float64, 10*Nx*Ny*3)
     nn = 1
 
     ########## SCALING THE FD MATRIX
@@ -22,35 +22,52 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
     meta = minimum(etas)
     mdx = maximum(dx)
     mdy = maximum(dy)
-    Kc = 2.0 * meta/(mdx+mdy)
-    Kb = 4.0 * meta/(mdx+mdy)^2
+    Kc = 2*meta/(mdx+mdy)
+    Kb = 4*meta/(mdx+mdy)^2
 
 
     # pressure anchor
     #IP=2
     #JP=3
-    JP = ceil((Nx-1)/2) #G.Ito
-    IP = 2
+    #JP=ceil((Nx-1)/2) #G.Ito
+    #IP=2
+    JP=2
+    IP=ceil((Ny-1)/2) #G.Ito
 
+    # tracking x location of the indenter for applying proper boundary
+    # conditions :
+    # indent_x_loc = 0
+    # # if exist('xm') == 0
+    # #     indent_x_loc = ceil(GEOM(5).right/(xsize/(Nx-1)))
+    # # elseif exist('xm') == 1
+    # for j = Nx-1:-1:1
+    #     mean_im = mean(im(xm < x(j+1) & xm >= x(j) & ym <= GEOM(1).bot/2))
+    #     if mean_im > 1.0001
+    #         indent_x_loc = j
+    #         break
+    #     end
+    # end
+    # #end
+    # v_out_indent = (PARAMS.v_in*sum(dy))/(2*(sum(dx) - x(indent_x_loc)))
 
     # fill in FD matrix and right-hand side
 
-    for j = 1:Nx
-        for i = 1:Ny
+    for j=1:Nx
+        for i=1:Ny
         #for j=1:Nx
 
-            in = (j - 1)*Ny + i
-            inp = 3*in - 2
-            invx = 3*in - 1
-            invy = 3*in
+            in=(j-1)*Ny+i
+            inp=3*in-2
+            invx=3*in-1
+            invy=3*in
 
 
             ####### CONTINUITY ###########################################
 
 
             if (i==1) || (j==1) || (i==2 && j==2) || (i==2 && j==Nx) ||
-               (i==Ny && j==2) || (i==Ny && j==Nx) || (i==IP && j==JP && BC.top[2] != 3) ||
-               (BC.top[2]==3 && i==2 && j>2 && j<Ny) #<--G.Ito
+               (i==Ny && j==2) || (i==Ny && j==Nx) || (i==IP && j==JP && BC.top[2]!=3) ||
+               (BC.top[2]==3 && i==2 && j > 2 && j < Ny) #<--G.Ito
 
 
                 # boundary conditions
@@ -98,24 +115,24 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                     R[inp,1]=0
                 end
 
-                if BC.top[2]==3 && i==2 && j>2 && j<Ny  #open top effect all nodes but corners, G.Ito
+                if (BC.top[2]==3 && i==2 && j > 2 && j < Ny)  #open top effect all nodes but corners, G.Ito
                     # Pressure gradient between top two rows extrapolates to 0 pressure at very top
     #
                     Lii[nn] = inp
                     Ljj[nn] = inp
-                    Lvv[n]  = Kb.*(1+dy[i-1]/(dy[i]+dy[i-1]))
+                    Lvv[nn]  = Kb.*(1+dy[i-1]/(dy[i]+dy[i-1]))
                     nn = nn+1
 
                     Lii[nn] = inp
                     Ljj[nn] = inp+3
-                    Lvv[n]  = -Kb.*dy[i-1]/(dy[i]+dy[i-1])
+                    Lvv[nn]  = -Kb.*dy[i-1]/(dy[i]+dy[i-1])
                     nn = nn+1
 
                     R[inp,1]=0
 
                 end
 
-                if i==IP && j==JP && BC.top[2]!=3   # additional pressure cell i=2, j=3 P(i,j)=p0cell
+                if (i==IP && j==JP && BC.top[2]!=3)   # additional pressure cell i=2, j=3 P(i,j)=p0cell
                      #                L(inp,inp)=Kb
 
                     Lii[nn] = inp
@@ -148,8 +165,8 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                 nn = nn+1
 
                 # coeffs for vy
-                #             L(inp,invy-3*Ny)=Kc/dy(i-1)
-                #             L(inp,invy-3*Ny-3)=-Kc/dy(i-1)
+                #             L(inp,invy-3*Ny]=Kc/dy(i-1]
+                #             L(inp,invy-3*Ny-3]=-Kc/dy(i-1]
 
                 Lii[nn] = inp
                 Ljj[nn] = invy-3*Ny
@@ -163,7 +180,7 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
 
                 # RHS
-                R[inp,1]=0#-drhodt(i,j)
+                R[inp,1]=0#-drhodt(i,j]
 
             end
 
@@ -200,10 +217,10 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                 end
 
 
-                if (i==1 && j<=Nx-1) && j>=2 # X-STOKES:  upper boundary not including sides
+                if i==1 && j<=Nx-1 && j>=2 # X-STOKES:  upper boundary not including sides
                     if BC.top[1]==1 # free slip
-                        #                  L[invx,invx+3)=Kc/[0.5*[dy[i)+dy[i+1)))
-                        #                  L[invx,invx)=-Kc/[0.5*[dy[i)+dy[i+1)))
+                        #                  L[invx,invx+3]=Kc/[0.5*[dy[i]+dy[i+1]]]
+                        #                  L[invx,invx]=-Kc/[0.5*[dy[i]+dy[i+1]]]
 
                         Lii[nn] = invx
                         Ljj[nn] = invx+3
@@ -217,8 +234,8 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
                         R[invx,1]=0
                     elseif BC.top[1]==0  # no slip
-                        #                  L(invx,invx+3)=Kc/(dy(i)+dy(i+1))
-                        #                  L(invx,invx)=-Kc*(1/dy(i)+1/(dy(i)+dy(i+1)))
+                        #                  L[invx,invx+3]=Kc/[dy[i]+dy[i+1]]
+                        #                  L[invx,invx]=-Kc*[1/dy[i]+1/[dy[i]+dy[i+1]]]
                         # Multiply whole eq. by 2 so coefficients are closer to
                         # the others
 
@@ -237,10 +254,10 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
                 end
 
-                if (i==Ny-1 && j<=Nx-1) && j>=2 # X-STOKES: lower boundary not including sides
+                if i==Ny-1 && j<=Nx-1 && j>=2 # X-STOKES: lower boundary not including sides
                     if BC.bot[1]==0 # no slip
-                        #                  L(invx,invx)=Kc*(1/dy(i)+1/(dy(i-1)+dy(i)))
-                        #                  L(invx,invx-3)=-Kc/(dy(i-1)+dy(i))
+                        #                  L[invx,invx)=Kc*[1/dy[i)+1/[dy[i-1)+dy[i)))
+                        #                  L[invx,invx-3)=-Kc/[dy[i-1)+dy[i))
 
                         Lii[nn] = invx
                         Ljj[nn] = invx
@@ -249,14 +266,14 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
                         Lii[nn] = invx
                         Ljj[nn] = invx-3
-                        Lvv[nn]  = -2*Kc/(d[i-1]+dy[i])
+                        Lvv[nn]  = -2*Kc/(dy[i-1]+dy[i])
                         nn = nn+1
 
                         R[invx,1]=2*Kc*(1/dy[i])*BC.bot_profile[j]
 
                     elseif BC.bot[1]==1 # free slip
-                        #                  L(invx,invx)=Kc/(0.5*(dy(i-1)+dy(i)))
-                        #                  L(invx,invx-3)=-Kc/(0.5*(dy(i-1)+dy(i)))
+                        #                  L[invx,invx]=Kc/[0.5*[dy[i-1]+dy[i]]]
+                        #                  L[invx,invx-3]=-Kc/[0.5*[dy[i-1]+dy[i]]]
 
                         Lii[nn] = invx
                         Ljj[nn] = invx
@@ -301,28 +318,28 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                 Lvv[nn]  = 4*etan[i+1,j]/(dx[j-1]*(dx[j-1]+dx[j]))
                 nn = nn+1
 
-                #         L(invx,invx)=(-4/(dx(j-1)+dx(j)))*(etan(i+1,j+1)/dx(j)+etan(i+1,j)/dx(j-1))-(2/dy(i))*(etas(i+1,j)/(dy(i)+dy(i+1))+etas(i,j)/(dy(i-1)+dy(i))) #
+                #         L[invx,invx]=[-4/[dx[j-1]+dx[j]]]*[etan[i+1,j+1]/dx[j]+etan[i+1,j]/dx[j-1]]-[2/dy[i]]*[etas[i+1,j]/[dy[i]+dy[i+1]]+etas[i,j]/[dy[i-1]+dy[i]]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = invx
                 Lvv[nn]  = (-4/(dx[j-1]+dx[j]))*(etan[i+1,j+1]/dx[j]+etan[i+1,j]/dx[j-1])-(2/dy[i])*(etas[i+1,j]/(dy[i]+dy[i+1])+etas[i,j]/(dy[i-1]+dy[i]))
                 nn = nn+1
 
-                #         L(invx,invx+3*Ny)=4*etan(i+1,j+1)/(dx(j)*(dx(j-1)+dx(j))) #
+                #         L[invx,invx+3*Ny]=4*etan[i+1,j+1]/[dx[j]*[dx[j-1]+dx[j]]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = invx+3*Ny
                 Lvv[nn]  = 4*etan[i+1,j+1]/(dx[j]*(dx[j-1]+dx[j]))
                 nn = nn+1
 
-                #         L(invx,invx-3]=2*etas(i,j]/(dy(i]*(dy(i-1]+dy(i]]] #
+                #         L[invx,invx-3]=2*etas[i,j]/[dy[i]*[dy[i-1]+dy[i]]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = invx-3
                 Lvv[nn]  = 2*etas[i,j]/(dy[i]*(dy[i-1]+dy[i]))
                 nn = nn+1
 
-                #         L(invx,invx+3]=2*etas(i+1,j]/(dy(i]*(dy(i]+dy(i+1]]] #
+                #         L[invx,invx+3]=2*etas[i+1,j]/[dy[i]*[dy[i]+dy[i+1]]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = invx+3
@@ -331,28 +348,28 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
                 # X-STOKES: coeffs for vy
 
-                #         L(invx,invy+3)=2*etas(i+1,j)/(dy(i)*(dx(j-1)+dx(j))) #
+                #         L[invx,invy+3]=2*etas[i+1,j]/[dy[i]*[dx[j-1]+dx[j]]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = invy+3
                 Lvv[nn]  = 2*etas[i+1,j]/(dy[i]*(dx[j-1]+dx[j]))
                 nn = nn+1
 
-                #         L(invx,invy+3-3*Ny]=-2*etas(i+1,j]/(dy(i]*(dx(j-1]+dx(j]]] #
+                #         L[invx,invy+3-3*Ny]=-2*etas[i+1,j]/[dy[i]*[dx[j-1]+dx[j]]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = invy+3-3*Ny
                 Lvv[nn]  = -2*etas[i+1,j]/(dy[i]*(dx[j-1]+dx[j]))
                 nn = nn+1
 
-                #         L(invx,invy]=-2*etas(i,j]/(dy(i]*(dx(j-1]+dx(j]]] #
+                #         L[invx,invy]=-2*etas[i,j]/[dy[i]*[dx[j-1]+dx[j]]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = invy
                 Lvv[nn]  = -2*etas[i,j]/(dy[i]*(dx[j-1]+dx[j]))
                 nn = nn+1
 
-                #         L(invx,invy-3*Ny]=2*etas(i,j]/(dy(i]*(dx(j-1]+dx(j]]] #
+                #         L[invx,invy-3*Ny]=2*etas[i,j]/[dy[i]*[dx[j-1]+dx[j]]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = invy-3*Ny
@@ -361,14 +378,14 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
                 # X-STOKES: coeffs for Pp
 
-                #         L(invx,inp+3*Ny+3]=-2*Kc/(dx(j-1]+dx(j]] #
+                #         L[invx,inp+3*Ny+3]=-2*Kc/[dx[j-1]+dx[j]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = inp+3*Ny+3
                 Lvv[nn]  = -2*Kc/(dx[j-1]+dx[j])
                 nn = nn+1
 
-                #         L(invx,inp+3]=2*Kc/(dx(j-1]+dx(j]] #
+                #         L[invx,inp+3]=2*Kc/[dx[j-1]+dx[j]] #
 
                 Lii[nn] = invx
                 Ljj[nn] = inp+3
@@ -408,8 +425,8 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                         R[invy,1]=0
 
                     elseif BC.left[1]==0 # no slip
-                        #              L(invy,invy]=-2*Kc*(1/(dx(j]+dx(j+1]]+1/dx(j]]
-                        #              L(invy,invy+3*Ny]=2*Kc/(dx(j+1]+dx(j]]
+                        #              L[invy,invy]=-2*Kc*[1/[dx[j]+dx[j+1]]+1/dx[j]]
+                        #              L[invy,invy+3*Ny]=2*Kc/[dx[j+1]+dx[j]]
 
                         Lii[nn] = invy
                         Ljj[nn] = invy
@@ -427,8 +444,8 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                 end
                 if j==Nx-1 && i<=Ny-1 && i>=2  # right boundary without edges
                     if BC.right[1]==1 # free slip
-                        #              L(invy,invy)=Kc/(0.5*(dx(j)+dx(j-1)))
-                        #              L(invy,invy-3*Ny)=-Kc/(0.5*(dx(j)+dx(j-1)))
+                        #              L[invy,invy]=Kc/[0.5*[dx[j]+dx[j-1]]]
+                        #              L[invy,invy-3*Ny]=-Kc/[0.5*[dx[j]+dx[j-1]]]
 
                         Lii[nn] = invy
                         Ljj[nn] = invy
@@ -443,8 +460,8 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                         R[invy,1]=0
 
                     elseif BC.right[1]==0 # no slip
-                        #              L(invy,invy)=Kc*(1/(dx(j)+dx(j-1))+1/dx(j))
-                        #              L(invy,invy-3*Ny)=-Kc/(dx(j)+dx(j-1))
+                        #              L[invy,invy]=Kc*[1/[dx[j]+dx[j-1]]+1/dx[j]]
+                        #              L[invy,invy-3*Ny]=-Kc/[dx[j]+dx[j-1]]
 
                         Lii[nn] = invy
                         Ljj[nn] = invy
@@ -475,7 +492,7 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
                 if i==1 && j<=Nx-1  # upper boundary
                     if BC.top[2]==0
-                        #              L[invy,invy)=Kb
+                        #              L[invy,invy]=Kb
 
                         Lii[nn] = invy
                         Ljj[nn] = invy
@@ -483,6 +500,19 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                         nn = nn+1
 
                         R[invy,1]=Kb*BC.top[3]
+
+                    elseif BC.top[2]==5
+
+                        Lii[nn] = invy
+                        Ljj[nn] = invy
+                        Lvv[nn]  = Kb
+                        nn = nn+1
+                        if j > indent_x_loc
+                            R[invy,1]=-Kb*v_out_indent
+                        else
+                            R[invy,1]=0
+                        end
+
                     elseif BC.top[2]==3
                         #               open top dvy/dy=0, G.Ito
 
@@ -498,6 +528,19 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
                         R[invy,1]=0
 
+                    elseif BC.top[2]==4 # infinity-like BC
+
+                        Lii[nn] = invy
+                        Ljj[nn] = invy
+                        Lvv[nn] = -Kc*(1/dy[i] + 1/PARAMS.L)
+                        nn      = nn+1
+
+                        Lii[nn] = invy
+                        Ljj[nn] = invy+3
+                        Lvv[nn] = Kc/dy[i]
+                        nn      = nn+1
+
+                        R[invy,1]=0
                     end
                 end
 
@@ -512,6 +555,19 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                         nn = nn+1
 
                         R[invy,1]=Kb*BC.bot[3]
+
+                    elseif BC.top[2]==5
+
+                        Lii[nn] = invy
+                        Ljj[nn] = invy
+                        Lvv[nn]  = Kb
+                        nn = nn+1
+
+                        if j > indent_x_loc
+                            R[invy,1]=Kb*v_out_indent
+                        else
+                            R[invy,1]=0
+                        end
 
                     elseif BC.bot[2] == 2 ##  external boundary
 
@@ -528,6 +584,20 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                         nn = nn+1
 
                         R[invy, 1] = 0
+
+                     elseif BC.top[2]==4 # infinity-like BC
+
+                        Lii[nn] = invy
+                        Ljj[nn] = invy
+                        Lvv[nn] = -Kc*(1/dy[i-1] + 1/PARAMS.L)
+                        nn      = nn+1
+
+                        Lii[nn] = invy
+                        Ljj[nn] = invy-3
+                        Lvv[nn] = Kc/dy[i-1]
+                        nn      = nn+1
+
+                        R[invy,1]=0
                     end
 
                 end
@@ -547,28 +617,28 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                 Lvv[nn]  = 2*etas[i,j]/(dx[j]*(dx[j-1]+dx[j]))
                 nn = nn+1
 
-                #         L(invy,invy)=(-4/(dy(i-1)+dy(i)))*(etan(i+1,j+1)/dy(i)+etan(i,j+1)/dy(i-1))-(2/dx(j))*(etas(i,j+1)/(dx(j)+dx(j+1))+etas(i,j)/(dx(j-1)+dx(j))) #
+                #         L[invy,invy]=[-4/[dy[i-1]+dy[i]]]*[etan[i+1,j+1]/dy[i]+etan[i,j+1]/dy[i-1]]-[2/dx[j]]*[etas[i,j+1]/[dx[j]+dx[j+1]]+etas[i,j]/[dx[j-1]+dx[j]]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = invy
                 Lvv[nn]  = (-4/(dy[i-1]+dy[i]))*(etan[i+1,j+1]/dy[i]+etan[i,j+1]/dy[i-1])-(2/dx[j])*(etas[i,j+1]/(dx[j]+dx[j+1])+etas[i,j]/(dx[j-1]+dx[j]))
                 nn = nn+1
 
-                #         L(invy,invy+3*Ny)=2*etas(i,j+1)/(dx(j)*(dx(j)+dx(j+1))) #
+                #         L[invy,invy+3*Ny]=2*etas[i,j+1]/[dx[j]*[dx[j]+dx[j+1]]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = invy+3*Ny
                 Lvv[nn]  = 2*etas[i,j+1]/(dx[j]*(dx[j]+dx[j+1]))
                 nn = nn+1
 
-                #         L(invy,invy-3)=4*etan(i,j+1)/(dy(i-1)*(dy(i-1)+dy(i))) #
+                #         L[invy,invy-3]=4*etan[i,j+1]/[dy[i-1]*[dy[i-1]+dy[i]]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = invy-3
                 Lvv[nn]  = 4*etan[i,j+1]/(dy[i-1]*(dy[i-1]+dy[i]))
                 nn  = nn+1
 
-                #         L(invy,invy+3)=4*etan(i+1,j+1)/(dy(i)*(dy(i-1)+dy(i))) #
+                #         L[invy,invy+3]=4*etan[i+1,j+1]/[dy[i]*[dy[i-1]+dy[i]]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = invy+3
@@ -577,14 +647,14 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
 
                 # coeffs for vx
 
-                #         L(invy,invx+3*Ny)=2*etas(i,j+1)/(dx(j)*(dy(i-1)+dy(i)))  #
+                #         L[invy,invx+3*Ny]=2*etas[i,j+1]/[dx[j]*[dy[i-1]+dy[i]]]  #
 
                 Lii[nn] = invy
                 Ljj[nn] = invx+3*Ny
                 Lvv[nn]  = 2*etas[i,j+1]/(dx[j]*(dy[i-1]+dy[i]))
                 nn = nn+1
 
-                #         L(invy,invx+3*Ny-3)=-2*etas(i,j+1)/(dx(j)*(dy(i-1)+dy(i))) #
+                #         L[invy,invx+3*Ny-3]=-2*etas[i,j+1]/[dx[j]*[dy[i-1]+dy[i]]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = invx+3*Ny-3
@@ -592,14 +662,14 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                 nn = nn+1
 
 
-                #         L(invy,invx)=-2*etas(i,j)/(dx(j)*(dy(i-1)+dy(i))) #
+                #         L[invy,invx]=-2*etas[i,j]/[dx[j]*[dy[i-1]+dy[i]]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = invx
                 Lvv[nn]  = -2*etas[i,j]/(dx[j]*(dy[i-1]+dy[i]))
                 nn = nn+1
 
-                #         L(invy,invx-3)=2*etas(i,j)/(dx(j)*(dy(i-1)+dy(i))) #
+                #         L[invy,invx-3]=2*etas[i,j]/[dx[j]*[dy[i-1]+dy[i]]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = invx-3
@@ -607,21 +677,21 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
                 nn=nn+1
 
                 # coeffs for Pp
-                #         L(invy,inp+3*Ny+3)=-2*Kc/(dy(i-1)+dy(i)) #
+                #         L[invy,inp+3*Ny+3]=-2*Kc/[dy[i-1]+dy[i]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = inp+3*Ny+3
                 Lvv[nn]  = -2*Kc/(dy[i-1]+dy[i])
                 nn=nn+1
 
-                #         L(invy,inp+3*Ny)=2*Kc/(dy(i-1)+dy(i)) #
+                #         L[invy,inp+3*Ny]=2*Kc/[dy[i-1]+dy[i]] #
 
                 Lii[nn] = invy
                 Ljj[nn] = inp+3*Ny
                 Lvv[nn]  = 2*Kc/(dy[i-1]+dy[i])
                 nn=nn+1
 
-                # RHS (note: sxx = -syy because deviatoric)
+                # RHS [note: sxx = -syy because deviatoric]
                 R[invy,1]=-gy*(rho[i,j]+rho[i,j+1])/2 +
                     2.0 *(srhs_xx[i+1,j+1]-srhs_xx[i,j+1])/(dy[i]+dy[i-1]) -
                     (srhs_xy[i,j+1]-srhs_xy[i,j])/dx[j] #
@@ -650,7 +720,7 @@ function assemble_L_R(dx,dy,etas,etan,rho,BC,PARAMS,srhs_xx,srhs_xy)
     #
 
 
-    return L, R, Kc, Kb
 
+    return L, R, Kc, Kb
 
 end

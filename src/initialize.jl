@@ -58,7 +58,7 @@ etan_new=zeros(Float64,Ny,Nx)
 # initialize dt_m small to keep things elastic & no plasticity at t=1, G.Ito
 #-------------------------------------------------------------------------
 if @isdefined(dt_m) == false
-    dt_m=1e2
+    dt_m = 1.0
 end
 
 # initialize marker chain to track base of layer 1 (sticky layer)
