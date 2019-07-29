@@ -34,33 +34,33 @@ function main(InpFil::String)
         include("material_props_on_nodes.jl")
 
         ### SOLVE STOKES WITH NON-LINEAR RHEOLOGY HERE
-        SiStER_flow_solve
+        include("flow_solve.jl")
 
         # GET STRAIN RATE FROM CURRENT SOLUTION
-        epsIIm=SiStER_interp_shear_nodes_to_markers(epsII_s,x,y,xm,ym,icn,jcn);
+        epsIIm = interp_shear_nodes_to_markers(epsII_s,x,y,xm,ym,icn,jcn)
 
         # USE STRAIN RATE TO UPDATE STRESSES ON MARKERS
-        SiStER_update_marker_stresses;
+        include("update_marker_stresses.jl")
 
         # BUILD UP PLASTIC STRAIN IN YIELDING AREAS IF PLASTICITY IS ACTIVATED
         if (PARAMS.YNPlas==1)
-            SiStER_update_ep;
+            update_ep
         end
 
         # OUTPUT VARIABLES OF INTEREST (prior to rotation & advection)
-        if (mod(t,dt_out)==0 & dt_out>0) | t==1 | t==Nt # SAVING SELECTED OUTPUT
-            disp('SAVING SELECTED VARIABLES TO OUTPUT FILE')
-            filename=num2str(t);
-            [etam]=SiStER_interp_shear_nodes_to_markers(etas,x,y,xm,ym,icn,jcn); # to visualize viscosity on markers
-            save(filename,'X','Y','vx','vy','p','time','xm','ym','etam','rhom','BC','etan','Tm','im','idm','epsIIm','sxxm','sxym','ep','epNH','icn','jcn','qd','topo_x','topo_y')
+        if (mod(t,dt_out)==0 && dt_out>0) || t==1 || t==Nt # SAVING SELECTED OUTPUT
+            println("SAVING SELECTED VARIABLES TO OUTPUT FILE")
+            filename=string(t)
+            etam = interp_shear_nodes_to_markers(etas,x,y,xm,ym,icn,jcn) # to visualize viscosity on markers
+            @save "$filename.jld2" X Y vx vy p time xm ym etam rhom BC etan Tm im idm epsIIm sxxm sxym ep epNH icn jcn qd
         end
 
         # SET ADVECTION TIME STEP BASED ON CURRENT FLOW SOLUTION
-        [dt_m]=SiStER_set_timestep(dx,dy,vx,vy,PARAMS);
+        dt_m = set_timestep(dx,dy,vx,vy,PARAMS)
 
         # ROTATE ELASTIC STRESSES IN CURRENT FLOW FIELD
         if (PARAMS.YNElast==1)
-            SiStER_rotate_stresses;
+            rotate_stresses
         end
 
         # EVOLVE TEMPERATURE FIELD THROUGH DIFFUSION
@@ -77,13 +77,13 @@ function main(InpFil::String)
         # here we do the same for the marker chain that keeps track of topography
         #######################################################################
 
-        disp('---------------')
-        disp(['END OF ITERATION: ' num2str(t) ' out of ' num2str(Nt) ' - SIMULATION TIME: ' num2str(time/365.25/24/3600/1000) ' kyrs.'])
-        disp('--------------------------------')
-        disp('--------------------------------')
+        println('---------------')
+        println(['END OF ITERATION: ' num2str(t) ' out of ' num2str(Nt) ' - SIMULATION TIME: ' num2str(time/365.25/24/3600/1000) ' kyrs.'])
+        println('--------------------------------')
+        println('--------------------------------')
 
 
     end
 
 end
-disp('FIN')
+println('FIN')

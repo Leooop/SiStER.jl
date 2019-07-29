@@ -27,3 +27,4 @@ time_sim += dt_m
 
 # Here we prepare nodal arrays to feed the Stokes solver
 include("material_props_on_nodes_parallel.jl")
+include("flow_solve.jl")
