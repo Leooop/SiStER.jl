@@ -10,6 +10,7 @@ module SiStER
 # standard :
 using Random: randperm
 using Statistics: mean
+using StatsBase: mode
 using SparseArrays
 
 import Base.Threads.@spawn
@@ -25,5 +26,6 @@ using JLD2, FileIO # To save variables.
 #--------
 
 include("functions_load.jl")
-include("main.jl")
+include("run_script.jl")
+#include("main.jl")
 end # module

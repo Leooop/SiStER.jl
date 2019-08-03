@@ -3,7 +3,7 @@
 
 function get_rotation_rate(vx,vy,dx,dy,BC)
 
-    Ny, Nx=size(vx)
+    Ny, Nx = size(vx)
     om = zeros(Float64,size(vy))
 
 

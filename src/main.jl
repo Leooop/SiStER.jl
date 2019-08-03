@@ -28,10 +28,11 @@ function main(InpFil::String)
         println("STARTING ITERATION: ", string(t), " out of ", string(Nt))
 
         # update time
+        global dt_m
         time_sim += dt_m
 
         # Here we prepare nodal arrays to feed the Stokes solver
-        include("material_props_on_nodes.jl")
+        include("material_props_on_nodes_parallel.jl")
 
         ### SOLVE STOKES WITH NON-LINEAR RHEOLOGY HERE
         include("flow_solve.jl")
@@ -44,7 +45,7 @@ function main(InpFil::String)
 
         # BUILD UP PLASTIC STRAIN IN YIELDING AREAS IF PLASTICITY IS ACTIVATED
         if (PARAMS.YNPlas==1)
-            update_ep
+            include("update_ep.jl")
         end
 
         # OUTPUT VARIABLES OF INTEREST (prior to rotation & advection)
@@ -60,30 +61,30 @@ function main(InpFil::String)
 
         # ROTATE ELASTIC STRESSES IN CURRENT FLOW FIELD
         if (PARAMS.YNElast==1)
-            rotate_stresses
+            include("rotate_stresses.jl")
         end
 
         # EVOLVE TEMPERATURE FIELD THROUGH DIFFUSION
         if PARAMS.Tsolve==1
-            SiStER_thermal_update;
+            include("thermal_update.jl")
         end
 
         # MARKER ADVECTION, REMOVAL, AND ADDITION #############################
-        SiStER_move_remove_and_reseed_markers;
+        include("move_remove_and_reseed_markers.jl")
         # advect markers in current flow field
         # remove markers if necessary
         # add markers if necessary
-        SiStER_update_topography_markers
+        include("update_topography_markers.jl")
         # here we do the same for the marker chain that keeps track of topography
         #######################################################################
 
-        println('---------------')
-        println(['END OF ITERATION: ' num2str(t) ' out of ' num2str(Nt) ' - SIMULATION TIME: ' num2str(time/365.25/24/3600/1000) ' kyrs.'])
-        println('--------------------------------')
-        println('--------------------------------')
+        println("---------------")
+        println(["END OF ITERATION: ", string(t), " out of ", string(Nt), " - SIMULATION TIME: ", string(time_sim/365.25/24/3600/1000), " kyrs."])
+        println("--------------------------------")
+        println("--------------------------------")
 
 
     end
 
 end
-println('FIN')
+println("FIN")

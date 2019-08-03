@@ -4,7 +4,7 @@
 # solution for non-linear dependence of L (viscosity) on S (vx,vy,P)
 # Used to be named "run_Picard_iterations" but name changed by G.Ito 6/21/16
 #--------------------------------------------------------------------------
-
+#function flow_solve(topo_x,topo_y,xsize,ysize,BC,PARAMS)
 
 if PARAMS.BalanceStickyLayer==1
 # BALANCE FLUXES ### JAO July 16, 2015
@@ -20,12 +20,11 @@ if PARAMS.BalanceStickyLayer==1
     BC.bot[3]=-ubot
 end
 
-
 ResL2 = 1.0
 
 for pit = 1:PARAMS.Npicard_max
 
-
+	global ResL2
     if pit == 1
         ResL2init = ResL2
     end
@@ -38,7 +37,7 @@ for pit = 1:PARAMS.Npicard_max
     #---------------------------------------------------------------------------------
     # Assemble L and R matrices
     #---------------------------------------------------------------------------------
-    L, R, Kc, Kb=assemble_L_R(dx,dy,x,y,xm,ym,phm,Zs.*etas,Zn.*etan,rho,BC,PARAMS,GEOM,srhs_xx,srhs_xy); #G.Ito
+    L, R, Kc, Kb=assemble_L_R(dx,dy,x,y,xm,ym,phm,Zs.*etas,Zn.*etan,rho,BC,PARAMS,GEOM,srhs_xx,srhs_xy) #G.Ito
 
     #---------------------------------------------------------------------------------
     # Residual:  L and R are from current solution S
@@ -71,16 +70,16 @@ for pit = 1:PARAMS.Npicard_max
        it_type = "Picard: "
     end
 
-    p, vx, vy = SiStER_reshape_solver_output(S,Kc,Nx,Ny)
+    p, vx, vy = reshape_solver_output(S,Kc,Nx,Ny)
 
     ## ASSESS CONVERGENCE
-    if (ResL2<PARAMS.conv_crit_ResL2 && pit >= PARAMS.Npicard_min)
+    if ((ResL2<PARAMS.conv_crit_ResL2) && (pit >= PARAMS.Npicard_min))
         println("Final residual = ", string(ResL2))
         println(string(pit), "iterations converged: L2 norm of residual dropped below ", string(PARAMS.conv_crit_ResL2))
         break
 	elseif (pit==PARAMS.Npicard_max)
         println("Final residual = ", string(ResL2))
-        println("WARNING! ", string(pit), " Picard / approx. Newton iterations failed to converge within tolerance of " string(PARAMS.conv_crit_ResL2))
+        println("WARNING! ", string(pit), " Picard / approx. Newton iterations failed to converge within tolerance of ", string(PARAMS.conv_crit_ResL2))
     end
 
 
